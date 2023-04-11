@@ -650,6 +650,65 @@ class Oracle(object):
         return topk_abs(np.mean(S_true, axis=0), self.params.k)
         # return np.mean(S_true, axis=0)
 
+"""Newly added."""
+class Top_K(object):
+    def __init__(self, params):
+        self.params = params
+    
+    def top_k_extract(self, arr, k):
+        """Output the top k indices of arr."""
+        indices = np.argpartition(arr, -k)[-k:]
+        return indices[np.argsort(arr[indices])][::-1]
+
+    def GD(self, S):
+        """Stage 1 algorithm."""
+        d = self.params.d
+        m = self.params.m
+        K = m / 3 # number of subgroups
+        k = self.params.k
+        X_grouped = np.split(S, K)
+        X_grouped = np.mean(X_grouped, axis=1)
+
+        # gradient descent
+        alpha = 1e-3
+        u = alpha * np.ones((d, 1))
+        v = alpha * np.ones((d, 1))
+
+        eta = 0.05
+        rho = 1
+        max_iter = 600
+
+        for t in range(max_iter):
+            grad_u = np.zeros((d, 1))
+            grad_v = np.zeros((d, 1))
+            for i in range(K):
+                grad_u += -np.sign(X_grouped[i, :].reshape((d, 1)) - u * u + v * v) * u
+                grad_v += np.sign(X_grouped[i, :].reshape((d, 1)) - u * u + v * v) * v
+            u -= eta * grad_u / K
+            v -= eta * grad_v / K
+            eta *= rho
+        
+        estimated_mean = abs(u * u - v * v)
+        top_k_indices = self.top_k_extract(estimated_mean, k)
+        return top_k_indices # output a list of k indices
+
+    def trim_data(self, S, top_indices):
+        """Set the non-top-k coordinates to 0 for every data point."""
+        sample_size = self.params.m
+        for i in range(sample_size):
+            new_vec = np.zeros_like(S[i])
+            new_vec[top_indices] = S[i][top_indices]
+            S[i] = new_vec.copy()
+        return S
+
+    def alg(self, S, indicator):
+        top_indices = self.GD(S)
+        S_new = self.trim_data(S, top_indices)
+        return S_new
+        # return S
+
+
+
 
 
 class ransacGaussianMean(object):
@@ -887,7 +946,7 @@ class plot_data(RunCollection):
 
     def plot_xloss(self, outputfilename, runs, xvar_name, bounds, title, xlabel, ylabel, ylims, y_is_m = False, relative = False, explicit_xs = False, xs = [], fsize = 10, fpad = 10, figsize = (1,1), fontname = 'Arial'):
 
-        cols = {'RSPCAdense':'k', 'RSPCAb':'b', 'RME_sp':'b', 'RME_sp_L':'g', 'RME':'r','ransacGaussianMean':'y' , 'NP_sp':'k', 'Oracle':'c'}
+        cols = {'RSPCAdense':'k', 'RSPCAb':'b', 'RME_sp':'b', 'RME_sp_L':'g', 'RME':'r','ransacGaussianMean':'y' , 'NP_sp':'k', 'Oracle':'c', 'Top_K': 'k'}
        
         markers = {'RSPCAdense':'.', 
                     'RSPCAb':'o', 
@@ -896,7 +955,8 @@ class plot_data(RunCollection):
                     'RME':'^',
                     'ransacGaussianMean':'D' , 
                     'NP_sp':'p', 
-                    'Oracle':'x'}
+                    'Oracle':'x',
+                    'Top_K': '.'}
         
         labels = {'RSPCAdense':"Robust dense PCA", 
                 'RSPCAb':"Robust sparse PCA", 
@@ -905,7 +965,8 @@ class plot_data(RunCollection):
                 'RME_sp':'RME_sp',
                 'RME_sp_L':'RME_sp_L',
                 'Oracle':'oracle',
-                'RME':'RME'
+                'RME':'RME',
+                'Top_K': 'Top_K'
                 }
 
         s = len(runs)

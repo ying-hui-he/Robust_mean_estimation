@@ -13,7 +13,10 @@ mpld3.enable_notebook()
 
 def err_rspca(a,b): return LA.norm(np.outer(a,a)-np.outer(b, b))
 
-def err(a,b): return LA.norm(a-b)
+def err(a,b):
+    print("estimated: ", a)
+    print("tm: ", b)
+    return LA.norm(a-b)
 
 class RunCollection(object):
     def __init__(self, func, inp):
@@ -647,6 +650,7 @@ class Oracle(object):
         S_true = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
         # print(S_true)
         # print(indicator)
+        print("oracle: ", topk_abs(np.mean(S_true, axis=0), self.params.k))
         return topk_abs(np.mean(S_true, axis=0), self.params.k)
         # return np.mean(S_true, axis=0)
 
@@ -662,6 +666,7 @@ class Top_K(object):
 
     def GD(self, S):
         """Stage 1 algorithm."""
+        print("S shape: ", S.shape)
         d = self.params.d
         m = self.params.m
         group_size = 1
@@ -678,7 +683,7 @@ class Top_K(object):
 
         eta = 0.05
         rho = 1
-        max_iter = 200
+        max_iter = 800
 
         for t in range(max_iter):
             grad_u = np.zeros((d, 1))
@@ -691,6 +696,7 @@ class Top_K(object):
             eta *= rho
         
         estimated_mean = abs(u * u - v * v)
+        # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
         # return top_k_indices # output a list of k indices
         return topk_abs(estimated_mean, k)
@@ -708,6 +714,7 @@ class Top_K(object):
         # top_indices = self.GD(S)
         # S_new = self.trim_data(S, top_indices)
         # return S_new
+        print("GD: ", self.GD(S))
         return self.GD(S)
 
 

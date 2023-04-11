@@ -664,7 +664,9 @@ class Top_K(object):
         """Stage 1 algorithm."""
         d = self.params.d
         m = self.params.m
-        K = m / 3 # number of subgroups
+        group_size = 1
+        K = m // group_size # number of subgroups
+        self.params.m = K
         k = self.params.k
         X_grouped = np.split(S, K)
         X_grouped = np.mean(X_grouped, axis=1)
@@ -676,7 +678,7 @@ class Top_K(object):
 
         eta = 0.05
         rho = 1
-        max_iter = 600
+        max_iter = 200
 
         for t in range(max_iter):
             grad_u = np.zeros((d, 1))
@@ -689,8 +691,9 @@ class Top_K(object):
             eta *= rho
         
         estimated_mean = abs(u * u - v * v)
-        top_k_indices = self.top_k_extract(estimated_mean, k)
-        return top_k_indices # output a list of k indices
+        # top_k_indices = self.top_k_extract(estimated_mean, k)
+        # return top_k_indices # output a list of k indices
+        return topk_abs(estimated_mean, k)
 
     def trim_data(self, S, top_indices):
         """Set the non-top-k coordinates to 0 for every data point."""
@@ -702,10 +705,11 @@ class Top_K(object):
         return S
 
     def alg(self, S, indicator):
-        top_indices = self.GD(S)
-        S_new = self.trim_data(S, top_indices)
-        return S_new
-        # return S
+        # top_indices = self.GD(S)
+        # S_new = self.trim_data(S, top_indices)
+        # return S_new
+        return self.GD(S)
+
 
 
 

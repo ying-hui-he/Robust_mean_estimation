@@ -14,8 +14,8 @@ mpld3.enable_notebook()
 def err_rspca(a,b): return LA.norm(np.outer(a,a)-np.outer(b, b))
 
 def err(a,b):
-    print("estimated: ", a)
-    print("tm: ", b)
+    # print("estimated: ", a)
+    # print("tm: ", b)
     return LA.norm(a-b)
 
 class RunCollection(object):
@@ -650,7 +650,7 @@ class Oracle(object):
         S_true = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
         # print(S_true)
         # print(indicator)
-        print("oracle: ", topk_abs(np.mean(S_true, axis=0), self.params.k))
+        # print("oracle: ", topk_abs(np.mean(S_true, axis=0), self.params.k))
         return topk_abs(np.mean(S_true, axis=0), self.params.k)
         # return np.mean(S_true, axis=0)
 
@@ -666,7 +666,6 @@ class Top_K(object):
 
     def GD(self, S):
         """Stage 1 algorithm."""
-        print("S shape: ", S.shape)
         d = self.params.d
         m = self.params.m
         group_size = 1
@@ -678,27 +677,27 @@ class Top_K(object):
 
         # gradient descent
         alpha = 1e-3
-        u = alpha * np.ones((d, 1))
-        v = alpha * np.ones((d, 1))
+        u = alpha * np.ones(d)
+        v = alpha * np.ones(d)
 
         eta = 0.05
         rho = 1
         max_iter = 800
 
         for t in range(max_iter):
-            grad_u = np.zeros((d, 1))
-            grad_v = np.zeros((d, 1))
+            grad_u = np.zeros(d)
+            grad_v = np.zeros(d)
             for i in range(K):
-                grad_u += -np.sign(X_grouped[i, :].reshape((d, 1)) - u * u + v * v) * u
-                grad_v += np.sign(X_grouped[i, :].reshape((d, 1)) - u * u + v * v) * v
+                grad_u += -np.sign(X_grouped[i, :].reshape(d) - u * u + v * v) * u
+                grad_v += np.sign(X_grouped[i, :].reshape(d) - u * u + v * v) * v
             u -= eta * grad_u / K
             v -= eta * grad_v / K
             eta *= rho
-        
         estimated_mean = abs(u * u - v * v)
         # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
         # return top_k_indices # output a list of k indices
+        # print("topk_est: ", topk_abs(estimated_mean, k))
         return topk_abs(estimated_mean, k)
 
     def trim_data(self, S, top_indices):
@@ -714,7 +713,7 @@ class Top_K(object):
         # top_indices = self.GD(S)
         # S_new = self.trim_data(S, top_indices)
         # return S_new
-        print("GD: ", self.GD(S))
+        # print("GD: ", self.GD(S))
         return self.GD(S)
 
 
@@ -957,7 +956,7 @@ class plot_data(RunCollection):
 
     def plot_xloss(self, outputfilename, runs, xvar_name, bounds, title, xlabel, ylabel, ylims, y_is_m = False, relative = False, explicit_xs = False, xs = [], fsize = 10, fpad = 10, figsize = (1,1), fontname = 'Arial'):
 
-        cols = {'RSPCAdense':'k', 'RSPCAb':'b', 'RME_sp':'b', 'RME_sp_L':'g', 'RME':'r','ransacGaussianMean':'y' , 'NP_sp':'k', 'Oracle':'c', 'Top_K': 'k'}
+        cols = {'RSPCAdense':'k', 'RSPCAb':'b', 'RME_sp':'b', 'RME_sp_L':'g', 'RME':'r','ransacGaussianMean':'y' , 'NP_sp':'k', 'Oracle':'c', 'Top_K': 'palevioletred'}
        
         markers = {'RSPCAdense':'.', 
                     'RSPCAb':'o', 
@@ -1058,7 +1057,10 @@ def indicat(M, k):
 """ Threshold to top-k in absolute value """
 
 def topk_abs(v, k):
+    # print("v: ", v)
     u = np.argpartition(np.abs(v), -k)[-k:]
+    # print("u: ", u)
+    # print(2)
     z = np.zeros(len(v))
     z[u] = v[u]
     return z

@@ -447,8 +447,7 @@ class Top_K_Filtered(FilterAlgs):
         top_indices = self.top_k_extract(stage1_mean, k)
         S_trimmed = self.trim_data(S, top_indices)
 
-        # super().alg(S_trimmed, indicator)
-        return FilterAlgs.alg(self, S_trimmed, indicator)
+        return super().alg(S_trimmed, indicator)
 
 
 class NP_sp(FilterAlgs):

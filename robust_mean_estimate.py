@@ -28,20 +28,19 @@ plt.rcParams['figure.dpi'] = 150
 eng = matlab.engine.start_matlab()
 
 class Params(object):
-    def __init__(self, mu, m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, dist_type = 'Guassian', noise_type = 'Guassian', nItrs = 0, mass = 0, tv = 0, fv = 0):
+    def __init__(self, mu = [10, -5, -2, 1], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0):
         self.m = m                      #Number of Samples
         self.d = d                      #Dimention
         self.k = k                      #Sparsity
         self.eps = eps                  #Corruption Proportion
         self.mu = mu                    #True Mean
         self.var = var                  #Variancce
-        self.dist_type = dist_type      #Distribution Type: 'Gaussian', 'Powerlaw'
-        self.noise_type = noise_type    #Noise Type: 'Gaussian', 'DenseNoise'
         self.tau = tau                  #Delta
         self.nItrs = nItrs              #Iterations
         self.mass = mass
         self.tv = tv
         self.fv = fv
+        self.tm = np.random.shuffle(np.append(mu, np.zeros(d-k)))   #Sparse Mean
         
 
 def err_rspca(a, b): return LA.norm(np.outer(a, a)-np.outer(b, b))
@@ -81,10 +80,7 @@ class GaussianModel(object):
         pass
 
     def generate(self, params):
-        m, d, k, mu, var = params.m, params.d, params.k, params.mu, params.var
-
-        tm = np.append(mu, np.zeros(d-k))   #Sparse Mean
-        np.random.shuffle(tm)
+        m, d, tm, var = params.m, params.d, params.tm, params.var
 
         S = var * np.random.randn(m, d) + tm
         #print(S)
@@ -93,6 +89,7 @@ class GaussianModel(object):
         return S, tm
 
 
+'''
 class PowerlawModel(object):
     def __init__(self):
         pass
@@ -114,21 +111,25 @@ class PowerlawModel(object):
         S = S - mean + tm
 
         return S, tm
-
+'''
+        
 
 class LognormalModel(object):
     def __init__(self):
         pass
 
     def generate(self, params):
-        m, d, k, mu, var = params.m, params.d, params.k, params.mu, params.var
+        m, d, tm, var = params.m, params.d, params.tm, params.var
 
-        tm = np.append(mu, np.zeros(d-k))   #Sparse Mean
-        np.random.shuffle(tm)
-
-        S = np.random.lognormal(np.ones(d), var, (m, d)) + tm - np.ones(d)
+        #S = np.random.lognormal(np.ones(d), var, (m, d))
+        S = np.zeros((m, d))
+        for i in range(m):
+            for j in range(d):
+                S[i][j] = var * np.random.lognormal() * (2 * np.random.randint(0,2) - 1)
         #print(S)
+        print(S)
         print(tm)
+        S = S + tm
 
         return S, tm
 
@@ -654,24 +655,30 @@ class Top_K(object):
         d = self.params.d
         m = self.params.m
         eps = self.params.eps
-        group_size = 4
+        group_size = self.params.group_size
 
         """TODO: How to choose group_size with params.eps"""
 
         K = m // group_size  # number of subgroups
         self.params.m = K
         # k = self.params.k
-        X_grouped = np.split(S, K)
-        X_grouped = np.mean(X_grouped, axis=1)
+        X_split = np.array_split(S, K)
+        X_grouped = []
+        for i in X_split:
+            X_grouped.append(np.mean(i, axis = 0))
+        #X_grouped = np.mean(X_grouped, axis=1)
 
         # gradient descent
         alpha = 1e-3
+
+        #TODO
+
         u = alpha * np.ones(d)
         v = alpha * np.ones(d)
 
         eta = 0.05
         rho = 1
-        max_iter = 2000
+        max_iter = 500
 
         """TODO: Stop Criterion"""
 
@@ -722,10 +729,42 @@ class Oracle(object):
 
     def alg(self, S, indicator):
         start_time = time.time()
-        S_true = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
+        MOM = [0,0,0,0,0,0]
+        tm = self.params.tm
+        S_1 = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
+        MOM[0] = topk_abs(np.mean(S_1, axis = 0), self.params.k)
+        S_2 = np.array_split(S_1, 2)
+        mean_2 = []
+        for i in range(len(S_2)):
+            mean_2.append(np.mean(S_2[i], axis = 0))
+        MOM[1] = topk_abs(np.median(mean_2, axis = 0), self.params.k)
+        S_4 = np.array_split(S_1, 4)
+        mean_4 = []
+        for i in range(len(S_4)):
+            mean_4.append(np.mean(S_4[i], axis = 0))
+        MOM[2] = topk_abs(np.median(mean_4, axis = 0), self.params.k)
+        S_5 = np.array_split(S_1, 5)
+        mean_5 = []
+        for i in range(len(S_5)):
+            mean_5.append(np.mean(S_5[i], axis = 0))
+        MOM[3] = topk_abs(np.median(mean_5, axis = 0), self.params.k)
+        S_10 = np.array_split(S_1, 10)
+        mean_10 = []
+        for i in range(len(S_10)):
+            mean_10.append(np.mean(S_10[i], axis = 0))
+        MOM[4] = topk_abs(np.median(mean_10, axis = 0), self.params.k)
+        S_20 = np.array_split(S_1, 20)
+        mean_20 = []
+        for i in range(len(S_20)):
+            mean_20.append(np.mean(S_20[i], axis = 0))
+        MOM[5] = topk_abs(np.median(mean_20, axis = 0), self.params.k)
+        MOM_loss = [0,0,0,0,0,0]
+        for i in range(6):
+            MOM_loss[i] = LA.norm(MOM[i]-tm)
+        index = np.argmin(MOM_loss)
         # print(S_true)
         # print(indicator)
-        return topk_abs(np.mean(S_true, axis=0), self.params.k), time.time() - start_time
+        return MOM[index], time.time() - start_time
         # return np.mean(S_true, axis=0)
 
 
@@ -805,9 +844,10 @@ class load_data(RunCollection):
         self.loss = loss
         self.inp = 0
         self.Run = 0
-        self.rspca = False
-        self.unknown_norm = False
+        #self.rspca = False
+        #self.unknown_norm = False
 
+    '''
     def testcount(self, f, maxcount, samp, medianerr=False):
         count = 0
         vs = []
@@ -884,64 +924,74 @@ class load_data(RunCollection):
                 samp = (minm + maxm)//2
 
         return samp, _
+    '''
 
-    def get_dataxy(self, xvar_name, bounds, y_is_m=False, mrange=0, relative=False,  explicit_xs=False, xs=[], medianerr=False):
+    def get_dataxy(self, xvar_name, xs=[]):
 
         results = {}
+        '''
         if y_is_m == True:
             l, s = mrange
             samp = l
-
+        
         if explicit_xs == False:
             xs = np.arange(*bounds)
         else:
             xs = xs
+        '''
 
         for xvar in xs:
             if xvar_name == 'm':
                 self.params.m = xvar
             elif xvar_name == 'k':
                 self.params.k = xvar
+                '''
                 self.params.tv = np.append(np.ones(xvar), np.zeros(
                     self.params.d-xvar))/np.sqrt(xvar)
                 self.params.fv = np.append(
                     np.zeros(self.params.d-xvar), np.ones(xvar))/np.sqrt(xvar)
+                '''
 
             elif xvar_name == 'd':
                 self.params.d = xvar
             elif xvar_name == 'eps':
                 self.params.eps = xvar
 
-            if y_is_m == False:
+            #if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
-                S, tm = self.model.generate(self.params)
-                S, indicator = self.noise_model.generate(self.params, S)
+            S, tm = self.model.generate(self.params)
+            S, indicator = self.noise_model.generate(self.params, S)
 
-                for f in self.keys:
-                    inp_copy = copy.copy(self.params)
-                    S_copy = S.copy()
-                    indicator_copy = indicator.copy()
+            for f in self.keys:
+                inp_copy = copy.copy(self.params)
+                S_copy = S.copy()
+                indicator_copy = indicator.copy()
 
-                    func = f(inp_copy)
-                    O = Oracle(inp_copy)
+                func = f(inp_copy)
+                #O = Oracle(inp_copy)
 
-                    if self.unknown_norm == True:
-                        f.unknown_norm = True
+                '''
+                if self.unknown_norm == True:
+                    f.unknown_norm = True
+                '''
 
-                    if xvar_name == 'biter':
-                        f.biter = xvar+1
+                if xvar_name == 'biter':
+                    f.biter = xvar+1
 
-                    if relative == True:
-                        estimated_mean, running_time = func.alg(S_copy, indicator_copy)
-                        estimated_mean_oracle, running_time_oracle = func.alg(S_copy, indicator_copy)
-                        results.setdefault(f.__name__, []).append(self.loss(estimated_mean, tm)/self.loss(estimated_mean_oracle, tm))
-                        results.setdefault(f.__name__ + '_time', []).append(running_time - running_time_oracle)
-                    else:
-                        estimated_mean, running_time = func.alg(S_copy, indicator_copy)
-                        results.setdefault(f.__name__, []).append(
-                            self.loss(estimated_mean, tm))
-                        results.setdefault(f.__name__ + '_time', []).append(running_time)
+                '''
+                if relative == True:
+                    estimated_mean, running_time = func.alg(S_copy, indicator_copy)
+                    estimated_mean_oracle, running_time_oracle = func.alg(S_copy, indicator_copy)
+                    results.setdefault(f.__name__, []).append(self.loss(estimated_mean, tm)/self.loss(estimated_mean_oracle, tm))
+                    results.setdefault(f.__name__ + '_time', []).append(running_time - running_time_oracle)
+                else:
+                '''
+                estimated_mean, running_time = func.alg(S_copy, indicator_copy)
+                results.setdefault(f.__name__, []).append(
+                    self.loss(estimated_mean, tm))
+                results.setdefault(f.__name__ + '_time', []).append(running_time)
 
+            '''
             else:
                 for f in self.keys:
                     minsamp, sampstep = 2, 100
@@ -950,12 +1000,12 @@ class load_data(RunCollection):
                     samp, _ = self.search_m(f, (minsamp, maxm), medianerr)
                     results.setdefault(f.__name__, []).append(samp)
                     results.setdefault(f.__name__ + '_time', []).append(_)
+            '''
         return results
 
-    def setdata_tofile(self, filename, xvar_name, bounds, trials, ylims, y_is_m=False, mrange=[], relative=False,  explicit_xs=False, xs=[], medianerr=False):
+    def setdata_tofile(self, filename, xvar_name, trials, xs=[]):
         start_time = time.perf_counter()
-        self.setdata(xvar_name, bounds, trials, ylims, y_is_m,
-                     mrange, relative,  explicit_xs, xs, medianerr)
+        self.setdata(xvar_name, trials, xs)
         with open(filename, 'wb') as g:
             pickle.dump(self.Run.runs, g, -1)
         
@@ -963,10 +1013,10 @@ class load_data(RunCollection):
         runtime = end_time - start_time
         print("runtime:", runtime)
 
-    def setdata(self, xvar_name, bounds, trials, ylims, y_is_m=False, mrange=[], relative=False,  explicit_xs=False, xs=[], medianerr=False):
+    def setdata(self, xvar_name, trials, xs=[]):
 
         Runs_l_samples = RunCollection(
-            self.get_dataxy, (xvar_name, bounds, y_is_m, mrange, relative,  explicit_xs, xs, medianerr))
+            self.get_dataxy, (xvar_name, xs))
         Runs_l_samples.run(trials)
         self.Run = Runs_l_samples
 
@@ -982,19 +1032,18 @@ class plot_data(RunCollection):
         self.loss = loss
         self.inp = 0
         self.Run = 0
-        self.rspca = False
+        #self.rspca = False
 
     def readdata(self, filename):
         with open(filename, 'rb') as g:
             ans = pickle.load(g)
         return ans
 
-    def plot_xloss(self, outputfilename, runs, xvar_name, bounds, title, xlabel, ylabel, ylims, y_is_m=False, relative=False, explicit_xs=False, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m',
-                'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
-                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'r', 'Topk_GD_time':'m'}
+                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m'
+                }
 
         markers = {'RME_sp': 'o',
                    'RME_sp_L': 'v',
@@ -1005,55 +1054,38 @@ class plot_data(RunCollection):
                    'Top_K': '.',
                    'GDAlgs':'^',
                    'Top_K_Filtered': 'o',
-                   'Topk_GD':'*',
-                   'RME_sp_time': 'o',
-                   'RME_sp_L_time': 'v',
-                   'RME_time': '^',
-                   'ransacGaussianMean_time': 'D',
-                   'NP_sp_time': 'p',
-                   'Oracle_time': 'x',
-                   'Top_K_time': '.',
-                   'GDAlgs_time':'^',
-                   'Top_K_Filtered_time': 'o',
-                   'Topk_GD_time':'*'}
+                   'Topk_GD':'*'
+                   }
 
-        labels = {'NP_sp': 'NP',
+        labels = {'NP_sp': 'NP_sp',
                   'ransacGaussianMean': 'RANSAC',
-                  'RME_sp': 'RME_sp',
-                  'RME_sp_L': 'RME_sp_L',
-                  'Oracle': 'oracle',
-                  'RME': 'RME',
+                  'RME_sp': 'Filter_sp_LQ',
+                  'RME_sp_L': 'Filter_sp_L',
+                  'Oracle': 'Oracle',
+                  'RME': 'Filter_nsp',
                   'Top_K': 'Top_K',
-                  'Top_K_Filtered': 'Top_K_Filtered',
+                  'Top_K_Filtered': 'Top_K + Filter_sp_LQ',
                   'GDAlgs':'Sparse GD',
-                  'Topk_GD':'Topk_GD',
-                  'NP_sp_time': 'NP',
-                  'ransacGaussianMean_time': 'RANSAC',
-                  'RME_sp_time': 'RME_sp',
-                  'RME_sp_L_time': 'RME_sp_L',
-                  'Oracle_time': 'oracle',
-                  'RME_time': 'RME',
-                  'Top_K_time': 'Top_K',
-                  'Top_K_Filtered_time': 'Top_K_Filtered',
-                  'GDAlgs_time':'Sparse GD',
-                  'Topk_GD_time':'Topk_GD'
+                  'Topk_GD':'Top_K + Sparse GD'
                   }
 
         s = len(runs)
         #print(runs)
         str_keys = [key.__name__ for key in self.keys]
         #print(str_keys)
-        str_keys_time = [key.__name__ + '_time' for key in self.keys]
+        #str_keys_time = [key.__name__ + '_time' for key in self.keys]
         #print(str_keys_time)
 
         for key in str_keys:
-            print(key)
+            #print(key)
             A = np.array([res[key] for res in runs])
-            print(A)
+            #print(A)
+            '''
             if explicit_xs == False:
                 xs = np.arange(*bounds)
             else:
                 xs = xs
+            '''
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
@@ -1061,7 +1093,7 @@ class plot_data(RunCollection):
             plt.plot(xs, np.median(A, axis=0),
                      label=labels[key], color=cols[key], marker=markers[key])
 
-        p = copy.copy(self.params)
+        #p = copy.copy(self.params)
 
         rcParams['figure.figsize'] = figsize
 
@@ -1077,35 +1109,24 @@ class plot_data(RunCollection):
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xloss_fromfile(self, outputfilename, filename, xvar_name, bounds, title, xlabel, ylabel, ylims, y_is_m=False, relative=False, explicit_xs=False, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
         Run = self.readdata(filename)
-        self.plot_xloss(outputfilename, Run, xvar_name, bounds, title, xlabel, ylabel,
-                        ylims, y_is_m, relative, explicit_xs, xs, fsize, fpad, figsize, fontname)
+        self.plot_xloss(outputfilename, Run, title, xlabel, ylabel,
+                        xs, fsize, fpad, figsize, fontname)
 
-    def plotxy_fromfile(self, outputfilename, filename, xvar_name, bounds, ylims, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, relative=False,  explicit_xs=False, xs=[], fontname='Arial'):
+    def plotxy_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial'):
 
-        self.plot_xloss_fromfile(outputfilename, filename, xvar_name, bounds, title, xlabel, ylabel, ylims, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, relative=relative, explicit_xs=explicit_xs, xs=xs, fontname=fontname)
+        self.plot_xloss_fromfile(outputfilename, filename, title, xlabel, ylabel, xs=xs, figsize=figsize,
+                                 fsize=fsize, fpad=fpad, fontname=fontname)
         plt.figure()
 
-    def plot_xloss_time(self, outputfilename, runs, xvar_name, bounds, title, xlabel, ylabel, ylims, y_is_m=False, relative=False, explicit_xs=False, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
 
-        cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m',
-                'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
-                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m'}
+        cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
+                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m'
+                }
 
-        markers = {'RME_sp': 'o',
-                   'RME_sp_L': 'v',
-                   'RME': '^',
-                   'ransacGaussianMean': 'D',
-                   'NP_sp': 'p',
-                   'Oracle': 'x',
-                   'Top_K': '.',
-                   'GDAlgs':'^',
-                   'Top_K_Filtered': 'o',
-                   'Topk_GD':'*',
-                   'RME_sp_time': 'o',
+        markers = {'RME_sp_time': 'o',
                    'RME_sp_L_time': 'v',
                    'RME_time': '^',
                    'ransacGaussianMean_time': 'D',
@@ -1114,19 +1135,10 @@ class plot_data(RunCollection):
                    'Top_K_time': '.',
                    'GDAlgs_time':'^',
                    'Top_K_Filtered_time': 'o',
-                   'Topk_GD_time':'*'}
+                   'Topk_GD_time':'*'
+                   }
 
-        labels = {'NP_sp': 'NP',
-                  'ransacGaussianMean': 'RANSAC',
-                  'RME_sp': 'RME_sp',
-                  'RME_sp_L': 'RME_sp_L',
-                  'Oracle': 'oracle',
-                  'RME': 'RME',
-                  'Top_K': 'Top_K',
-                  'Top_K_Filtered': 'Top_K_Filtered',
-                  'GDAlgs':'Sparse GD',
-                  'Topk_GD':'Topk_GD',
-                  'NP_sp_time': 'NP',
+        labels = {'NP_sp_time': 'NP',
                   'ransacGaussianMean_time': 'RANSAC',
                   'RME_sp_time': 'RME_sp',
                   'RME_sp_L_time': 'RME_sp_L',
@@ -1140,7 +1152,7 @@ class plot_data(RunCollection):
 
         s = len(runs)
         #print(runs)
-        str_keys = [key.__name__ for key in self.keys]
+        #str_keys = [key.__name__ for key in self.keys]
         #print(str_keys)
         str_keys_time = [key.__name__ + '_time' for key in self.keys]
         #print(str_keys_time)
@@ -1149,10 +1161,12 @@ class plot_data(RunCollection):
             print(key)
             A = np.array([res[key] for res in runs])
             print(A)
+            '''
             if explicit_xs == False:
                 xs = np.arange(*bounds)
             else:
                 xs = xs
+            '''
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
@@ -1160,7 +1174,7 @@ class plot_data(RunCollection):
             plt.plot(xs, np.median(A, axis=0),
                      label=labels[key], color=cols[key], marker=markers[key])
 
-        p = copy.copy(self.params)
+        #p = copy.copy(self.params)
 
         rcParams['figure.figsize'] = figsize
 
@@ -1176,15 +1190,15 @@ class plot_data(RunCollection):
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xloss_fromfile_time(self, outputfilename, filename, xvar_name, bounds, title, xlabel, ylabel, ylims, y_is_m=False, relative=False, explicit_xs=False, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xtime_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
         Run = self.readdata(filename)
-        self.plot_xloss_time(outputfilename, Run, xvar_name, bounds, title, xlabel, ylabel,
-                        ylims, y_is_m, relative, explicit_xs, xs, fsize, fpad, figsize, fontname)
+        self.plot_xtime(outputfilename, Run, title, xlabel, ylabel,
+                        xs, fsize, fpad, figsize, fontname)
 
-    def plotxy_fromfile_time(self, outputfilename, filename, xvar_name, bounds, ylims, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, relative=False,  explicit_xs=False, xs=[], fontname='Arial'):
+    def plotxy_fromfile_time(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial'):
 
-        self.plot_xloss_fromfile_time(outputfilename, filename, xvar_name, bounds, title, xlabel, ylabel, ylims, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, relative=relative, explicit_xs=explicit_xs, xs=xs, fontname=fontname)
+        self.plot_xloss_fromfile_time(outputfilename, filename, title, xlabel, ylabel, figsize=figsize,
+                                 fsize=fsize, fpad=fpad, xs=xs, fontname=fontname)
         plt.figure()
 
 """ P(x) for quadratic filter """

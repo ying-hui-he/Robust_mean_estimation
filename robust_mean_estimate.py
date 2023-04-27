@@ -28,7 +28,7 @@ plt.rcParams['figure.dpi'] = 150
 eng = matlab.engine.start_matlab()
 
 class Params(object):
-    def __init__(self, mu = [10, -5, -2, 1], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0):
+    def __init__(self, mu = [10, -5, -2, 1], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4):
         self.m = m                      #Number of Samples
         self.d = d                      #Dimention
         self.k = k                      #Sparsity
@@ -40,7 +40,12 @@ class Params(object):
         self.mass = mass
         self.tv = tv
         self.fv = fv
-        self.tm = np.random.shuffle(np.append(mu, np.zeros(d-k)))   #Sparse Mean
+        self.group_size = group_size
+        
+    def tm(self):
+        tm = np.append(self.mu, np.zeros(self.d-self.k))
+        np.random.shuffle(tm)
+        return tm                       #Sparse Mean
         
 
 def err_rspca(a, b): return LA.norm(np.outer(a, a)-np.outer(b, b))
@@ -80,7 +85,7 @@ class GaussianModel(object):
         pass
 
     def generate(self, params):
-        m, d, tm, var = params.m, params.d, params.tm, params.var
+        m, d, tm, var = params.m, params.d, params.tm(), params.var
 
         S = var * np.random.randn(m, d) + tm
         #print(S)
@@ -119,7 +124,7 @@ class LognormalModel(object):
         pass
 
     def generate(self, params):
-        m, d, tm, var = params.m, params.d, params.tm, params.var
+        m, d, tm, var = params.m, params.d, params.tm(), params.var
 
         #S = np.random.lognormal(np.ones(d), var, (m, d))
         S = np.zeros((m, d))
@@ -127,7 +132,7 @@ class LognormalModel(object):
             for j in range(d):
                 S[i][j] = var * np.random.lognormal() * (2 * np.random.randint(0,2) - 1)
         #print(S)
-        print(S)
+        #print(S)
         print(tm)
         S = S + tm
 
@@ -665,8 +670,10 @@ class Top_K(object):
         X_split = np.array_split(S, K)
         X_grouped = []
         for i in X_split:
-            X_grouped.append(np.mean(i, axis = 0))
+            X_grouped.append(list(np.mean(i, axis = 0)))
         #X_grouped = np.mean(X_grouped, axis=1)
+        #print(X_grouped)
+        X_grouped = np.array(X_grouped)
 
         # gradient descent
         alpha = 1e-3
@@ -730,7 +737,7 @@ class Oracle(object):
     def alg(self, S, indicator):
         start_time = time.time()
         MOM = [0,0,0,0,0,0]
-        tm = self.params.tm
+        tm = self.params.tm()
         S_1 = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
         MOM[0] = topk_abs(np.mean(S_1, axis = 0), self.params.k)
         S_2 = np.array_split(S_1, 2)
@@ -1197,7 +1204,7 @@ class plot_data(RunCollection):
 
     def plotxy_fromfile_time(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial'):
 
-        self.plot_xloss_fromfile_time(outputfilename, filename, title, xlabel, ylabel, figsize=figsize,
+        self.plot_xtime_fromfile(outputfilename, filename, title, xlabel, ylabel, figsize=figsize,
                                  fsize=fsize, fpad=fpad, xs=xs, fontname=fontname)
         plt.figure()
 

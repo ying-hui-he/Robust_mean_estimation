@@ -463,8 +463,10 @@ class Top_K_Filtered(FilterAlgs):
         S_trimmed = self.trim_data(S, top_indices)
         time_stage_1 = time.time() - start_time
         mean, time_stage_2  =  super().alg(S_trimmed, indicator)
-        #print('ATTENTION')
+        #print('ATTENTION!')
         #print(mean)
+        if type(mean) == int:
+            mean = np.zeros(len(stage1_mean))
         #print(top_indices)
         #print(stage1_mean)
         final_mean = np.zeros(len(stage1_mean))
@@ -952,6 +954,7 @@ class load_data(RunCollection):
                 self.params.m = xvar
             elif xvar_name == 'k':
                 self.params.k = xvar
+                self.params.mu = np.ones(xvar)
                 '''
                 self.params.tv = np.append(np.ones(xvar), np.zeros(
                     self.params.d-xvar))/np.sqrt(xvar)

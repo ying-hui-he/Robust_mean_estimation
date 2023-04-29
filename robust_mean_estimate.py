@@ -138,6 +138,7 @@ class LognormalModel(object):
 
         return S, tm
 
+
 """Noise generate"""
 
 
@@ -514,7 +515,9 @@ class Topk_GD(object):
         S_trimmed = self.trim_data(S, top_indices)
 
         S_trimmed = matlab.double(S_trimmed.tolist())
-        estimated_mean = eng.robust_mean_pgd(S_trimmed, self.params.eps, 100)
+        tmp = [self.params.eps]
+        tmp = matlab.double(tmp)
+        estimated_mean = eng.robust_mean_pgd(S_trimmed, tmp[0][0], 100)
 
         estimated_mean_total = np.zeros(len(stage1_mean))
         j = 0

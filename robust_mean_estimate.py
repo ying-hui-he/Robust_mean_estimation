@@ -4,6 +4,8 @@ import numpy as np
 import scipy
 import copy
 import powerlaw
+from scipy.stats import powerlaw
+from scipy.stats import pareto
 from scipy import special
 from numpy import linalg as LA
 from scipy.sparse import coo_matrix
@@ -44,7 +46,6 @@ class Params(object):
         
     def tm(self):
         tm = np.append(self.mu, np.zeros(self.d-self.k))
-        np.random.shuffle(tm)
         return tm                       #Sparse Mean
         
 
@@ -117,7 +118,43 @@ class PowerlawModel(object):
 
         return S, tm
 '''
+
+
+class PowerlawModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm = params.m, params.d, params.var, params.tm()
+
+        a = 0.659
+        S = np.zeros((m, d))
+        for i in range(m):
+            for j in range(d):
+                S[i][j] = var * powerlaw.rvs(a) * (2 * np.random.randint(0,2) - 1)
         
+        S = S + tm
+
+        return S, tm
+        
+
+class ParetoModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm = params.m, params.d, params.var, params.tm()
+
+        a = 2.62
+        S = np.zeros((m, d))
+        for i in range(m):
+            for j in range(d):
+                S[i][j] = var * pareto.rvs(a) * (2 * np.random.randint(0,2) - 1)
+        
+        S = S + tm
+
+        return S, tm
+
 
 class LognormalModel(object):
     def __init__(self):
@@ -155,7 +192,7 @@ class DenseNoise(object):
 
         G[L:] += self.dist
 
-        indicator = np.ones(len(G))     #G[i] is noise iff indicator[i] = 1
+        indicator = np.ones(len(G))
         indicator[L:] = 0
 
         print(G)

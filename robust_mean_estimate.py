@@ -6,6 +6,9 @@ import copy
 import powerlaw
 from scipy.stats import powerlaw
 from scipy.stats import pareto
+from scipy.stats import cauchy
+from scipy.stats import levy
+from scipy.stats import t
 from scipy import special
 from numpy import linalg as LA
 from scipy.sparse import coo_matrix
@@ -30,7 +33,7 @@ plt.rcParams['figure.dpi'] = 150
 eng = matlab.engine.start_matlab()
 
 class Params(object):
-    def __init__(self, mu = [10, -5, -2, 1], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4):
+    def __init__(self, mu = [10, -5, -2, 1], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4, param = 1):
         self.m = m                      #Number of Samples
         self.d = d                      #Dimention
         self.k = k                      #Sparsity
@@ -43,6 +46,7 @@ class Params(object):
         self.tv = tv
         self.fv = fv
         self.group_size = group_size
+        self.param = param
         
     def tm(self):
         tm = np.append(self.mu, np.zeros(self.d-self.k))
@@ -143,13 +147,55 @@ class ParetoModel(object):
         pass
 
     def generate(self, params):
-        m, d, var, tm = params.m, params.d, params.var, params.tm()
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
 
-        a = 2.62
+        #a = 2.62
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * pareto.rvs(a) * (2 * np.random.randint(0,2) - 1)
+                S[i][j] = var * pareto.rvs(param) * (2 * np.random.randint(0,2) - 1)
+        
+        S = S + tm
+
+        return S, tm
+
+
+class CauchyModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, tm, var = params.m, params.d, params.tm(), params.var
+
+        S = var * cauchy.rvs(size = (m, d)) + tm
+
+        return S, tm
+    
+
+class TModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
+
+        #df = 2.74
+        S = var * t.rvs(param, size = (m,d)) + tm
+
+        return S, tm
+    
+
+class LevyModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm = params.m, params.d, params.var, params.tm()
+
+        S = np.zeros((m, d))
+        for i in range(m):
+            for j in range(d):
+                S[i][j] = var * levy.rvs() * (2 * np.random.randint(0,2) - 1)
         
         S = S + tm
 
@@ -168,7 +214,6 @@ class LognormalModel(object):
         for i in range(m):
             for j in range(d):
                 S[i][j] = var * np.random.lognormal() * (2 * np.random.randint(0,2) - 1)
-        #print(S)
         #print(S)
         print(tm)
         S = S + tm
@@ -201,13 +246,14 @@ class DenseNoise(object):
     
 
 class GaussianNoise(object):
-    def __init__(self):
-        pass
+    def __init__(self, noise_mean = 20, noise_var = 50):
+        self.noise_mean = noise_mean
+        self.noise_var = noise_var
 
-    def generate(self, params, S, noise_mean = 20, noise_var = 50):
+    def generate(self, params, S):
         eps, m, d = params.eps, params.m, params.d
 
-        Gaussian_Noise = noise_var * np.random.randn(m, d) + noise_mean
+        Gaussian_Noise = self.noise_var * np.random.randn(m, d) + self.noise_mean
 
         G = S.copy()
 
@@ -1007,6 +1053,12 @@ class load_data(RunCollection):
             elif xvar_name == 'eps':
                 self.params.eps = xvar
 
+            elif xvar_name == 'param':
+                self.params.param = xvar
+
+            elif xvar_name == 'var':
+                self.params.var = xvar
+
             #if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
             S, tm = self.model.generate(self.params)
@@ -1089,7 +1141,7 @@ class plot_data(RunCollection):
             ans = pickle.load(g)
         return ans
 
-    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
                 'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m'
@@ -1155,22 +1207,23 @@ class plot_data(RunCollection):
         plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.legend()
+        plt.yscale(yscale)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
         Run = self.readdata(filename)
         self.plot_xloss(outputfilename, Run, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname)
+                        xs, fsize, fpad, figsize, fontname, yscale)
 
-    def plotxy_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial'):
+    def plotxy_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
 
         self.plot_xloss_fromfile(outputfilename, filename, title, xlabel, ylabel, xs=xs, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname)
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.figure()
 
-    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
                 'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m'
@@ -1236,19 +1289,20 @@ class plot_data(RunCollection):
         plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.legend()
+        plt.yscale(yscale)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xtime_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial'):
+    def plot_xtime_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
         Run = self.readdata(filename)
         self.plot_xtime(outputfilename, Run, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname)
+                        xs, fsize, fpad, figsize, fontname, yscale)
 
-    def plotxy_fromfile_time(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial'):
+    def plotxy_fromfile_time(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
 
         self.plot_xtime_fromfile(outputfilename, filename, title, xlabel, ylabel, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, xs=xs, fontname=fontname)
+                                 fsize=fsize, fpad=fpad, xs=xs, fontname=fontname, yscale=yscale)
         plt.figure()
 
 """ P(x) for quadratic filter """

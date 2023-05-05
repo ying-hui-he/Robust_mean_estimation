@@ -20,9 +20,12 @@ import matplotlib.pyplot as plt
 from pylab import rcParams
 import pickle
 from matplotlib import rc
+import matplotlib
+import matplotlib as mpl
 import ast
 import mpld3
 import time
+from math import ceil
 from math import sqrt
 mpld3.enable_notebook()
 
@@ -752,7 +755,8 @@ class Top_K(object):
 
         """TODO: How to choose group_size with params.eps"""
 
-        K = m // group_size  # number of subgroups
+        #K = m // group_size  # number of subgroups
+        K = 2 * ceil(eps * m)
         self.params.m = K
         # k = self.params.k
         X_split = np.array_split(S, K)
@@ -773,7 +777,7 @@ class Top_K(object):
 
         eta = 0.05
         rho = 1
-        max_iter = 500
+        max_iter = 200
 
         """TODO: Stop Criterion"""
 
@@ -792,7 +796,12 @@ class Top_K(object):
             """TODO: How to set the decay rate"""
 
         estimated_mean = u * u - v * v
-        return estimated_mean
+        top_k_indices = 0
+        for i in range(len(estimated_mean)):
+            if np.abs(estimated_mean[i]) >= alpha:
+                top_k_indices += 1
+
+        return topk_abs(estimated_mean, top_k_indices)
         # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
         # return top_k_indices # output a list of k indices
@@ -1059,6 +1068,10 @@ class load_data(RunCollection):
             elif xvar_name == 'var':
                 self.params.var = xvar
 
+
+            elif xvar_name == 'group_size':
+                self.params.group_size = xvar
+
             #if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
             S, tm = self.model.generate(self.params)
@@ -1119,6 +1132,52 @@ class load_data(RunCollection):
 
         Runs_l_samples = RunCollection(
             self.get_dataxy, (xvar_name, xs))
+        Runs_l_samples.run(trials)
+        self.Run = Runs_l_samples
+
+    def get_dataxy_heatmap(self, xs, ys):
+
+        results = {}
+        f = self.keys
+
+        for yvar in ys[::-1]:
+            heat = []
+            for xvar in xs:
+                self.params.m = xvar
+                self.params.k = yvar
+                self.params.mu = np.ones(yvar)
+
+                S, tm = self.model.generate(self.params)
+                S, indicator = self.noise_model.generate(self.params, S)
+
+                inp_copy = copy.copy(self.params)
+                S_copy = S.copy()
+                indicator_copy = indicator.copy()
+
+                func = f(inp_copy)
+
+                estimated_mean, running_time = func.alg(S_copy, indicator_copy)
+                heat.append(self.loss(estimated_mean, tm))
+            results.setdefault(f.__name__, []).append(heat)
+        print(results)
+        return results
+                
+
+    def setdata_tofile_heatmap(self, filename, trials, xs = [], ys = []):
+        start_time = time.perf_counter()
+        self.setdata_heatmap(trials, xs, ys)
+        with open(filename, 'wb') as g:
+            pickle.dump(self.Run.runs, g, -1)
+
+        end_time = time.perf_counter()
+        runtime = end_time - start_time
+        print("runtime:", runtime)
+
+    def setdata_heatmap(self, trials, xs=[], ys=[]):
+
+        Runs_l_samples = RunCollection(
+            self.get_dataxy_heatmap, (xs, ys)
+        )
         Runs_l_samples.run(trials)
         self.Run = Runs_l_samples
 
@@ -1304,6 +1363,40 @@ class plot_data(RunCollection):
         self.plot_xtime_fromfile(outputfilename, filename, title, xlabel, ylabel, figsize=figsize,
                                  fsize=fsize, fpad=fpad, xs=xs, fontname=fontname, yscale=yscale)
         plt.figure()
+
+    def plot_heatmap(self, outputfilename, runs, title, xlabel, ylabel, xs=[], ys = [],fsize=10, fpad=10, figsize=(1,1), fontname='Arial', yscale = 'linear'):
+
+        f = self.keys
+        key = f.__name__
+
+        A = np.array([res[key] for res in runs])
+        #print(A)
+        A = np.median(A, axis=0)
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(A, cmap=plt.cm.winter)
+
+        ax.set_xticks(np.arange(len(xs)), labels=xs)
+        ax.set_yticks(np.arange(len(ys)), labels=ys[::-1])
+        ax.set_title(title)
+        for i in range(len(xs)):
+            for j in range(len(ys)):
+                text = ax.text(j, i, round(A[i, j],2),
+                       ha="center", va="center", color="w")
+        cbar = ax.figure.colorbar(im, ax=ax)
+        cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+
+
+    def plot_heatmap_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+        Run = self.readdata(filename)
+        self.plot_heatmap(outputfilename, Run, title, xlabel, ylabel,
+                        xs, ys,fsize, fpad, figsize, fontname, yscale)
+
+    def plotheatmap_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], ys=[], fontname='Arial', yscale='linear'):
+
+        self.plot_heatmap_fromfile(outputfilename, filename, title, xlabel, ylabel, xs=xs, ys=ys, figsize=figsize,
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+        plt.show()
 
 """ P(x) for quadratic filter """
 

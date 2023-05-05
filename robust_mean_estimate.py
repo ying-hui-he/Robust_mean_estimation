@@ -1049,7 +1049,7 @@ class load_data(RunCollection):
                 self.params.m = xvar
             elif xvar_name == 'k':
                 self.params.k = xvar
-                self.params.mu = np.ones(xvar)
+                self.params.mu = np.ones(xvar) * 5
                 '''
                 self.params.tv = np.append(np.ones(xvar), np.zeros(
                     self.params.d-xvar))/np.sqrt(xvar)
@@ -1067,7 +1067,6 @@ class load_data(RunCollection):
 
             elif xvar_name == 'var':
                 self.params.var = xvar
-
 
             elif xvar_name == 'group_size':
                 self.params.group_size = xvar
@@ -1159,7 +1158,7 @@ class load_data(RunCollection):
                 estimated_mean, running_time = func.alg(S_copy, indicator_copy)
                 heat.append(self.loss(estimated_mean, tm))
             results.setdefault(f.__name__, []).append(heat)
-        print("heatmap results:", results)
+        # print("heatmap results:", results)
         return results
                 
 
@@ -1374,7 +1373,7 @@ class plot_data(RunCollection):
         print("heatmap input:", A)
 
         fig, ax = plt.subplots()
-        im = ax.imshow(A, cmap=plt.cm.winter)
+        im = ax.imshow(A, cmap=mpl.colormaps['YlGn'])
 
         ax.set_xticks(np.arange(len(xs)), labels=xs)
         ax.set_yticks(np.arange(len(ys)), labels=ys[::-1])
@@ -1382,9 +1381,12 @@ class plot_data(RunCollection):
         for i in range(len(xs)):
             for j in range(len(ys)):
                 text = ax.text(i, j, round(A[j, i],2),
-                       ha="center", va="center", color="w")
+                       ha="center", va="center", color="black")
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+
+        plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
+        plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.savefig(outputfilename, bbox_inches='tight')
 
 

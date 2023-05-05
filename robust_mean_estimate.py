@@ -1159,7 +1159,7 @@ class load_data(RunCollection):
                 estimated_mean, running_time = func.alg(S_copy, indicator_copy)
                 heat.append(self.loss(estimated_mean, tm))
             results.setdefault(f.__name__, []).append(heat)
-        print(results)
+        print("heatmap results:", results)
         return results
                 
 
@@ -1370,8 +1370,8 @@ class plot_data(RunCollection):
         key = f.__name__
 
         A = np.array([res[key] for res in runs])
-        #print(A)
         A = np.median(A, axis=0)
+        print("heatmap input:", A)
 
         fig, ax = plt.subplots()
         im = ax.imshow(A, cmap=plt.cm.winter)
@@ -1381,10 +1381,11 @@ class plot_data(RunCollection):
         ax.set_title(title)
         for i in range(len(xs)):
             for j in range(len(ys)):
-                text = ax.text(j, i, round(A[i, j],2),
+                text = ax.text(i, j, round(A[j, i],2),
                        ha="center", va="center", color="w")
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+        plt.savefig(outputfilename, bbox_inches='tight')
 
 
     def plot_heatmap_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):

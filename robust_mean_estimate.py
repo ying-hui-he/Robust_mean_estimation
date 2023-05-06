@@ -36,7 +36,7 @@ plt.rcParams['figure.dpi'] = 150
 eng = matlab.engine.start_matlab()
 
 class Params(object):
-    def __init__(self, mu = [10, -5, -2, 1], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4, param = 1):
+    def __init__(self, mu = [10, -5, -4, 2], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4, param = 1):
         self.m = m                      #Number of Samples
         self.d = d                      #Dimention
         self.k = k                      #Sparsity
@@ -1142,7 +1142,7 @@ class load_data(RunCollection):
             for xvar in xs:
                 self.params.m = xvar
                 self.params.k = yvar
-                self.params.mu = np.ones(yvar)
+                self.params.mu = np.ones(yvar) * 2
 
                 S, tm = self.model.generate(self.params)
                 S, indicator = self.noise_model.generate(self.params, S)

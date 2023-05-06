@@ -545,10 +545,11 @@ class Top_K_Filtered(FilterAlgs):
 
         """TODO: How to find k"""
 
-        stage1_mean = Top_K.GD(self, S)
-        top_indices = self.top_k_extract(stage1_mean, k)
+        stage1_mean, pred_k = Top_K.GD(self, S, 200)
+        top_indices = self.top_k_extract(stage1_mean, pred_k)
         S_trimmed = self.trim_data(S, top_indices)
         time_stage_1 = time.time() - start_time
+        self.params.d = pred_k
         mean, time_stage_2  =  super().alg(S_trimmed, indicator)
         #print('ATTENTION!')
         #print(mean)
@@ -596,8 +597,8 @@ class Topk_GD(object):
 
         """TODO: How to find k"""
 
-        stage1_mean = Top_K.GD(self, S)
-        top_indices = self.top_k_extract(stage1_mean, k)
+        stage1_mean, pred_k = Top_K.GD(self, S, 200)
+        top_indices = self.top_k_extract(stage1_mean, pred_k)
         S_trimmed = self.trim_data(S, top_indices)
 
         S_trimmed = matlab.double(S_trimmed.tolist())
@@ -739,14 +740,14 @@ class GDAlgs(object):
         print('Time to run GD ', total_time)
         mu_gd = topk_abs(np.sum(w * X.T, axis=1), k)
         return mu_gd, total_time
-    
+
 
 class Top_K(object):
 
     def __init__(self, params):
         self.params = params
 
-    def GD(self, S):
+    def GD(self, S, iter_num):
         """Stage 1 algorithm."""
         d = self.params.d
         m = self.params.m
@@ -757,7 +758,7 @@ class Top_K(object):
 
         #K = m // group_size  # number of subgroups
         K = 2 * ceil(eps * m)
-        self.params.m = K
+        #self.params.m = K
         # k = self.params.k
         X_split = np.array_split(S, K)
         X_grouped = []
@@ -766,18 +767,15 @@ class Top_K(object):
         #X_grouped = np.mean(X_grouped, axis=1)
         #print(X_grouped)
         X_grouped = np.array(X_grouped)
-
         # gradient descent
-        alpha = 1e-3
-
-        #TODO
+        alpha = 1e-5
 
         u = alpha * np.ones(d)
         v = alpha * np.ones(d)
 
         eta = 0.05
         rho = 1
-        max_iter = 200
+        max_iter = iter_num
 
         """TODO: Stop Criterion"""
 
@@ -793,15 +791,14 @@ class Top_K(object):
             v -= eta * grad_v / K
             eta *= rho
 
-            """TODO: How to set the decay rate"""
-
         estimated_mean = u * u - v * v
         top_k_indices = 0
         for i in range(len(estimated_mean)):
             if np.abs(estimated_mean[i]) >= alpha:
                 top_k_indices += 1
-
-        return topk_abs(estimated_mean, top_k_indices)
+        print("Prediction:", top_k_indices)
+        self.params.k = top_k_indices
+        return topk_abs(estimated_mean, top_k_indices), top_k_indices
         # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
         # return top_k_indices # output a list of k indices
@@ -809,18 +806,19 @@ class Top_K(object):
         # return topk_abs(estimated_mean, k)
 
     def alg(self, S, indicator):
-        start_time = time.time()
+        
         """Main algorithm."""
         # top_indices = self.GD(S)
         # S_new = self.trim_data(S, top_indices)
         # return S_new
         # print("GD: ", self.GD(S))
-        k = self.params.k
-        estimated_mean = self.GD(S)
-
+        #k = self.params.kxianzai 
+        estimated_mean, pred_k = self.GD(S, 200)
+        start_time = time.time()
+        estimated_mean, _ = self.GD(S,600)
         total_time = time.time() - start_time
 
-        return topk_abs(estimated_mean, k), total_time
+        return topk_abs(estimated_mean, pred_k), total_time
 
 
 """TODO: How much iterations do we need? How to choose batch size? How to set decay rate?"""
@@ -1078,8 +1076,8 @@ class load_data(RunCollection):
 
             for f in self.keys:
                 inp_copy = copy.copy(self.params)
-                S_copy = S.copy()
-                indicator_copy = indicator.copy()
+                S_copy = copy.deepcopy(S)
+                indicator_copy = copy.deepcopy(indicator)
 
                 func = f(inp_copy)
                 #O = Oracle(inp_copy)

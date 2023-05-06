@@ -1047,7 +1047,7 @@ class load_data(RunCollection):
                 self.params.m = xvar
             elif xvar_name == 'k':
                 self.params.k = xvar
-                self.params.mu = np.ones(xvar) * 5
+                self.params.mu = np.ones(xvar) * 2
                 '''
                 self.params.tv = np.append(np.ones(xvar), np.zeros(
                     self.params.d-xvar))/np.sqrt(xvar)

@@ -188,7 +188,7 @@ class TModel(object):
 
         return S, tm
     
-
+'''
 class LevyModel(object):
     def __init__(self):
         pass
@@ -204,7 +204,7 @@ class LevyModel(object):
         S = S + tm
 
         return S, tm
-
+'''
 
 class LognormalModel(object):
     def __init__(self):

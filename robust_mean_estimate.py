@@ -162,7 +162,7 @@ class ParetoModel(object):
 
         return S, tm
 
-
+'''
 class CauchyModel(object):
     def __init__(self):
         pass
@@ -173,6 +173,7 @@ class CauchyModel(object):
         S = var * cauchy.rvs(size = (m, d)) + tm
 
         return S, tm
+'''
     
 
 class TModel(object):
@@ -187,7 +188,7 @@ class TModel(object):
 
         return S, tm
     
-
+'''
 class LevyModel(object):
     def __init__(self):
         pass
@@ -203,7 +204,7 @@ class LevyModel(object):
         S = S + tm
 
         return S, tm
-
+'''
 
 class LognormalModel(object):
     def __init__(self):
@@ -797,6 +798,7 @@ class Top_K(object):
             if np.abs(estimated_mean[i]) >= alpha:
                 top_k_indices += 1
         print("Prediction:", top_k_indices)
+        top_k_indices = max(2,top_k_indices)
         self.params.k = top_k_indices
         return topk_abs(estimated_mean, top_k_indices), top_k_indices
         # print("estimated: ", estimated_mean)

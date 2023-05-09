@@ -36,7 +36,7 @@ plt.rcParams['figure.dpi'] = 150
 eng = matlab.engine.start_matlab()
 
 class Params(object):
-    def __init__(self, mu = [10, -5, -4, 2], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4, param = 1):
+    def __init__(self, mu = [10, -5, -4, 2], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4, param = 1, J = 40):
         self.m = m                      #Number of Samples
         self.d = d                      #Dimention
         self.k = k                      #Sparsity
@@ -50,6 +50,7 @@ class Params(object):
         self.fv = fv
         self.group_size = group_size
         self.param = param
+        self.J = J
         
     def tm(self):
         tm = np.append(self.mu, np.zeros(self.d-self.k))
@@ -268,6 +269,39 @@ class GaussianNoise(object):
         indicator = np.ones(len(G))     #G[i] is noise iff indicator[i] = 1
         indicator[L:] = 0
         return G, indicator
+
+
+"""Data pre processing"""
+
+
+def pre_processing(params, S, indicator):
+
+    m = params.m
+    eps = params.eps
+    idx = np.arange(m)
+    np.random.shuffle(idx)
+    K = 2 * ceil(eps * m)
+    idx_split = np.array_split(idx, K)
+    X_grouped = []
+    indicator_preprocessing = np.ones(K)
+    for i in range(K):
+        idx_tmp = idx_split[i]
+        S_tmp = [S[j] for j in idx_tmp]
+        X_grouped.append(list(np.mean(S_tmp, axis = 0)))
+        for h in idx_tmp:
+            indicator_preprocessing[i] *= indicator[h]
+    '''
+    X_split = np.array_split(S, K)
+    X_grouped = []
+    for i in X_split:
+        X_grouped.append(list(np.mean(i, axis = 0)))
+    '''
+    #X_grouped = np.mean(X_grouped, axis=1)
+    #print(X_grouped)
+    X_grouped = np.array(X_grouped)
+    params.m = K
+    params.eps = ceil(eps * m) / K
+    return params, X_grouped, indicator_preprocessing
 
 
 """Algorithm"""
@@ -497,21 +531,61 @@ class FilterAlgs(object):
             return topk_abs(np.mean(S, axis=0), k), total_time, 
         else:
             return np.mean(S, axis=0), total_time
-        
+
+
+class NP_sp_npre(FilterAlgs):
+
+    lfilter, qfilter = False, False       
+
 
 class NP_sp(FilterAlgs):
 
     lfilter, qfilter = False, False
+
+    def alg(self, S, indicator):
+        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        self.params = params
+
+        return super().alg(S = S, indicator = indicator)
+
+
+class RME_sp_npre(FilterAlgs):
+
+    lfilter, qfilter = True, True
 
 
 class RME_sp(FilterAlgs):
 
     lfilter, qfilter = True, True
 
+    def alg(self, S, indicator):
+        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        self.params = params
+
+        return super().alg(S = S, indicator = indicator)
+
+
+class RME_sp_L_npre(FilterAlgs):
+
+    lfilter, qfilter = True, False
+
 
 class RME_sp_L(FilterAlgs):
 
     lfilter, qfilter = True, False
+
+    def alg(self, S, indicator):
+        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        self.params = params
+
+        return super().alg(S = S, indicator = indicator)
+
+
+class RME_npre(FilterAlgs):
+
+    lfilter, qfilter = True, False
+    dense_filter = True
+    # do_plot_linear = True
 
 
 class RME(FilterAlgs):
@@ -519,6 +593,12 @@ class RME(FilterAlgs):
     lfilter, qfilter = True, False
     dense_filter = True
     # do_plot_linear = True
+
+    def alg(self, S, indicator):
+        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        self.params = params
+
+        return super().alg(S = S, indicator = indicator)
 
 
 class Top_K_Filtered(FilterAlgs):
@@ -541,16 +621,15 @@ class Top_K_Filtered(FilterAlgs):
 
     def alg(self, S, indicator):
         """Main algorithm."""
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
         start_time = time.time()
         k = self.params.k
 
-        """TODO: How to find k"""
-
         stage1_mean, pred_k = Top_K.GD(self, S, 200)
-        top_indices = self.top_k_extract(stage1_mean, pred_k)
-        S_trimmed = self.trim_data(S, top_indices)
+        S_trimmed = self.trim_data(S, pred_k)
         time_stage_1 = time.time() - start_time
-        self.params.d = pred_k
+        #self.params.d = pred_k
         mean, time_stage_2  =  super().alg(S_trimmed, indicator)
         #print('ATTENTION!')
         #print(mean)
@@ -565,7 +644,7 @@ class Top_K_Filtered(FilterAlgs):
             #final_mean[top_indices[i]] = mean[i]
 
         j = 0
-        for i in top_indices:
+        for i in pred_k:
             final_mean[i] = mean[j]
             j = j + 1
 
@@ -593,14 +672,16 @@ class Topk_GD(object):
         return S_new
 
     def alg(self, S, indicator):
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
         start_time = time.time()
         k = self.params.k
 
-        """TODO: How to find k"""
-
         stage1_mean, pred_k = Top_K.GD(self, S, 200)
-        top_indices = self.top_k_extract(stage1_mean, pred_k)
-        S_trimmed = self.trim_data(S, top_indices)
+        #top_indices = self.top_k_extract(stage1_mean, pred_k)
+        #S_trimmed = self.trim_data(S, top_indices)
+        S_trimmed = self.trim_data(S, pred_k)
+
 
         S_trimmed = matlab.double(S_trimmed.tolist())
         tmp = [self.params.eps]
@@ -609,20 +690,19 @@ class Topk_GD(object):
 
         estimated_mean_total = np.zeros(len(stage1_mean))
         j = 0
-        for i in top_indices:
+        for i in pred_k:
             estimated_mean_total[i] = estimated_mean[j][0]
             j = j + 1
         print('ATTENTION')
         print(estimated_mean)
-        print(top_indices)
+        print(pred_k)
         print(stage1_mean)
         total_time = time.time() - start_time
 
         return estimated_mean_total, total_time
 
 
-
-class GDAlgs(object):
+class GDAlgs_npre(object):
 
     def __init__(self, params):
         self.params = params
@@ -743,6 +823,15 @@ class GDAlgs(object):
         return mu_gd, total_time
 
 
+class GDAlgs(GDAlgs_npre):
+
+    def alg(self, S, indicator):
+        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        self.params = params
+
+        return super().alg(S = S, indicator = indicator)
+
+
 class Top_K(object):
 
     def __init__(self, params):
@@ -753,10 +842,8 @@ class Top_K(object):
         d = self.params.d
         m = self.params.m
         eps = self.params.eps
-        group_size = self.params.group_size
-
-        """TODO: How to choose group_size with params.eps"""
-
+        '''
+        #group_size = self.params.group_size
         #K = m // group_size  # number of subgroups
         K = 2 * ceil(eps * m)
         #self.params.m = K
@@ -769,6 +856,7 @@ class Top_K(object):
         #print(X_grouped)
         X_grouped = np.array(X_grouped)
         # gradient descent
+        '''
         alpha = 1e-5
 
         u = alpha * np.ones(d)
@@ -783,24 +871,25 @@ class Top_K(object):
         for t in range(max_iter):
             grad_u = np.zeros(d)
             grad_v = np.zeros(d)
-            for i in range(K):
+            for i in range(m):
                 grad_u += - \
-                    np.sign(X_grouped[i, :].reshape(d) - u * u + v * v) * u
-                grad_v += np.sign(X_grouped[i,
+                    np.sign(S[i, :].reshape(d) - u * u + v * v) * u
+                grad_v += np.sign(S[i,
                                   :].reshape(d) - u * u + v * v) * v
-            u -= eta * grad_u / K
-            v -= eta * grad_v / K
+            u -= eta * grad_u / m
+            v -= eta * grad_v / m
             eta *= rho
 
         estimated_mean = u * u - v * v
-        top_k_indices = 0
+        top_k_indices = []
+
         for i in range(len(estimated_mean)):
             if np.abs(estimated_mean[i]) >= alpha:
-                top_k_indices += 1
+                top_k_indices.append(i)
         print("Prediction:", top_k_indices)
-        top_k_indices = max(2,top_k_indices)
-        self.params.k = top_k_indices
-        return topk_abs(estimated_mean, top_k_indices), top_k_indices
+        top_k_indices_num = max(1,len(top_k_indices))
+        self.params.k = top_k_indices_num
+        return trim_idx_abs(estimated_mean, top_k_indices), top_k_indices
         # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
         # return top_k_indices # output a list of k indices
@@ -814,13 +903,15 @@ class Top_K(object):
         # S_new = self.trim_data(S, top_indices)
         # return S_new
         # print("GD: ", self.GD(S))
-        #k = self.params.kxianzai 
+        #k = self.params.k
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
         estimated_mean, pred_k = self.GD(S, 200)
         start_time = time.time()
         estimated_mean, _ = self.GD(S,600)
         total_time = time.time() - start_time
 
-        return topk_abs(estimated_mean, pred_k), total_time
+        return trim_idx_abs(estimated_mean, pred_k), total_time
 
 
 """TODO: How much iterations do we need? How to choose batch size? How to set decay rate?"""
@@ -1061,6 +1152,8 @@ class load_data(RunCollection):
                 self.params.d = xvar
             elif xvar_name == 'eps':
                 self.params.eps = xvar
+                '''J = self.params.J
+                self.params.m = int(J/xvar)'''
 
             elif xvar_name == 'param':
                 self.params.param = xvar
@@ -1453,3 +1546,12 @@ def trim_k_abs(v, k):
     # print("u: ", u)
     # print(2)
     return v[u]
+
+
+def trim_idx_abs(v, idx):
+    z = np.zeros(len(v))
+    if len(idx) == 0: return z
+    for i in idx:
+        z[i] = v[i]
+
+    return z

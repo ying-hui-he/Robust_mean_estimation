@@ -1152,8 +1152,8 @@ class load_data(RunCollection):
                 self.params.d = xvar
             elif xvar_name == 'eps':
                 self.params.eps = xvar
-                J = self.params.J
-                self.params.m = int(J/xvar)
+                '''J = self.params.J
+                self.params.m = int(J/xvar)'''
 
             elif xvar_name == 'param':
                 self.params.param = xvar

@@ -299,6 +299,7 @@ def pre_processing(params, S, indicator):
     #X_grouped = np.mean(X_grouped, axis=1)
     #print(X_grouped)
     X_grouped = np.array(X_grouped)
+    print('m = {m} change to K = {K}')
     params.m = K
     params.eps = ceil(eps * m) / K
     return params, X_grouped, indicator_preprocessing
@@ -655,6 +656,27 @@ class Top_K_Filtered(FilterAlgs):
 """TODO: When to stop the algorithm? How to choose batch size?"""
 
 
+class GD_nonsparse(object):
+
+    def __init__(self, params):
+        self.params = params
+
+    def alg(self, S, indicator):
+        start_time = time.time()
+        S_tmp = matlab.double(S.tolist())
+        tmp = [self.params.eps]
+        tmp = matlab.double(tmp)
+        estimated_mean = eng.robust_mean_pgd(S_tmp, tmp[0][0], 100)
+
+        estimated_mean_total = np.zeros(len(estimated_mean))
+        j = 0
+        for i in len(estimated_mean):
+            estimated_mean_total[i] = estimated_mean[j][0]
+            j = j + 1
+        total_time = time.time() - start_time
+
+        return estimated_mean_total, total_time
+
 class Topk_GD(object):
 
     def __init__(self, params):
@@ -912,9 +934,6 @@ class Top_K(object):
         total_time = time.time() - start_time
 
         return trim_idx_abs(estimated_mean, pred_k), total_time
-
-
-"""TODO: How much iterations do we need? How to choose batch size? How to set decay rate?"""
 
 
 class Oracle(object):
@@ -1295,7 +1314,8 @@ class plot_data(RunCollection):
     def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m'
+                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m',
+                'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 
         markers = {'RME_sp': 'o',
@@ -1307,7 +1327,13 @@ class plot_data(RunCollection):
                    'Top_K': '.',
                    'GDAlgs':'^',
                    'Top_K_Filtered': 'o',
-                   'Topk_GD':'*'
+                   'Topk_GD':'*',
+                   'NP_sp_npre': 'p',
+                   'RME_sp_npre': 'o', 
+                   'RME_sp_L_npre': 'v', 
+                   'RME_npre': '^', 
+                   'GDAlgs_npre': '^',
+                   'GD_nonsparse': '*'
                    }
 
         labels = {'NP_sp': 'NP_sp',
@@ -1318,8 +1344,14 @@ class plot_data(RunCollection):
                   'RME': 'Filter_nsp',
                   'Top_K': 'Top_K',
                   'Top_K_Filtered': 'Top_K + Filter_sp_LQ',
-                  'GDAlgs':'Sparse GD',
-                  'Topk_GD':'Top_K + Sparse GD'
+                  'GDAlgs': 'Sparse GD',
+                  'Topk_GD': 'Top_K + Sparse GD',
+                  'NP_sp_npre': 'NP_sp_npre',
+                  'RME_sp_npre': 'Filter_sp_LQ_npre', 
+                  'RME_sp_L_npre': 'Filter_sp_L_npre', 
+                  'RME_npre': 'Filter_nsp_npre', 
+                  'GDAlgs_npre': 'Sparse GD_npre',
+                  'GD_nonsparse': 'GD_nonsparse'
                   }
 
         s = len(runs)
@@ -1377,7 +1409,8 @@ class plot_data(RunCollection):
     def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
-                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m'
+                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m',
+                'NP_sp_npre_time': 'gray', 'RME_sp_npre_time': 'skyblue', 'RME_sp_L_npre_time': 'springgreen', 'RME_npre_time': 'tomato', 'GDAlgs_npre_time': 'peachpuff', 'GD_nonsparse_time': 'plum'
                 }
 
         markers = {'RME_sp_time': 'o',
@@ -1389,19 +1422,31 @@ class plot_data(RunCollection):
                    'Top_K_time': '.',
                    'GDAlgs_time':'^',
                    'Top_K_Filtered_time': 'o',
-                   'Topk_GD_time':'*'
+                   'Topk_GD_time':'*',
+                   'NP_sp_npre_time': 'p',
+                   'RME_sp_npre_time': 'o', 
+                   'RME_sp_L_npre_time': 'v', 
+                   'RME_npre_time': '^', 
+                   'GDAlgs_npre_time': '^',
+                   'GD_nonsparse_time': '*'
                    }
 
-        labels = {'NP_sp_time': 'NP',
+        labels = {'NP_sp_time': 'NP_sp',
                   'ransacGaussianMean_time': 'RANSAC',
-                  'RME_sp_time': 'RME_sp',
-                  'RME_sp_L_time': 'RME_sp_L',
-                  'Oracle_time': 'oracle',
-                  'RME_time': 'RME',
+                  'RME_sp_time': 'Filter_sp_LQ',
+                  'RME_sp_L_time': 'Filter_sp_L',
+                  'Oracle_time': 'Oracle',
+                  'RME_time': 'Filter_nsp',
                   'Top_K_time': 'Top_K',
-                  'Top_K_Filtered_time': 'Top_K_Filtered',
-                  'GDAlgs_time':'Sparse GD',
-                  'Topk_GD_time':'Topk_GD'
+                  'Top_K_Filtered_time': 'Top_K + Filter_sp_LQ',
+                  'GDAlgs_time': 'Sparse GD',
+                  'Topk_GD_time': 'Top_K + Sparse GD',
+                  'NP_sp_npre_time': 'NP_sp_npre',
+                  'RME_sp_npre_time': 'Filter_sp_LQ_npre', 
+                  'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
+                  'RME_npre_time': 'Filter_nsp_npre', 
+                  'GDAlgs_npre_time': 'Sparse GD_npre',
+                  'GD_nonsparse': 'GD_nonsparse'
                   }
 
         s = len(runs)

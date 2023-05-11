@@ -9,6 +9,7 @@ from scipy.stats import pareto
 from scipy.stats import cauchy
 from scipy.stats import levy
 from scipy.stats import t
+from scipy.stats import fisk
 from scipy import special
 from numpy import linalg as LA
 from scipy.sparse import coo_matrix
@@ -280,7 +281,7 @@ def pre_processing(params, S, indicator):
     eps = params.eps
     idx = np.arange(m)
     np.random.shuffle(idx)
-    K = 2 * ceil(eps * m)
+    K = 1.5 * ceil(eps * m) + 150
     idx_split = np.array_split(idx, K)
     X_grouped = []
     indicator_preprocessing = np.ones(K)
@@ -888,8 +889,6 @@ class Top_K(object):
         rho = 1
         max_iter = iter_num
 
-        """TODO: Stop Criterion"""
-
         for t in range(max_iter):
             grad_u = np.zeros(d)
             grad_v = np.zeros(d)
@@ -947,27 +946,27 @@ class Oracle(object):
         tm = self.params.tm()
         S_1 = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
         MOM[0] = topk_abs(np.mean(S_1, axis = 0), self.params.k)
-        S_2 = np.array_split(S_1, 2)
+        S_2 = np.array_split(S_1, 10)
         mean_2 = []
         for i in range(len(S_2)):
             mean_2.append(np.mean(S_2[i], axis = 0))
         MOM[1] = topk_abs(np.median(mean_2, axis = 0), self.params.k)
-        S_4 = np.array_split(S_1, 4)
+        S_4 = np.array_split(S_1, 50)
         mean_4 = []
         for i in range(len(S_4)):
             mean_4.append(np.mean(S_4[i], axis = 0))
         MOM[2] = topk_abs(np.median(mean_4, axis = 0), self.params.k)
-        S_5 = np.array_split(S_1, 5)
+        S_5 = np.array_split(S_1, 100)
         mean_5 = []
         for i in range(len(S_5)):
             mean_5.append(np.mean(S_5[i], axis = 0))
         MOM[3] = topk_abs(np.median(mean_5, axis = 0), self.params.k)
-        S_10 = np.array_split(S_1, 10)
+        S_10 = np.array_split(S_1, 150)
         mean_10 = []
         for i in range(len(S_10)):
             mean_10.append(np.mean(S_10[i], axis = 0))
         MOM[4] = topk_abs(np.median(mean_10, axis = 0), self.params.k)
-        S_20 = np.array_split(S_1, 20)
+        S_20 = np.array_split(S_1, 200)
         mean_20 = []
         for i in range(len(S_20)):
             mean_20.append(np.mean(S_20[i], axis = 0))

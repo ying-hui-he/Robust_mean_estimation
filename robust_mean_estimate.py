@@ -196,12 +196,12 @@ class FiskModel(object):
         pass
 
     def generate(self, params):
-        m, d, var, tm = params.m, params.d, params.var, params.tm()
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
 
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * fisk.rvs() * (2 * np.random.randint(0,2) - 1)
+                S[i][j] = var * fisk.rvs(param) * (2 * np.random.randint(0,2) - 1)
         
         S = S + tm
 
@@ -1448,7 +1448,7 @@ class plot_data(RunCollection):
                   'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
                   'RME_npre_time': 'Filter_nsp_npre', 
                   'GDAlgs_npre_time': 'Sparse GD_npre',
-                  'GD_nonsparse': 'GD_nonsparse'
+                  'GD_nonsparse_time': 'GD_nonsparse'
                   }
 
         s = len(runs)
@@ -1479,7 +1479,7 @@ class plot_data(RunCollection):
 
         rcParams['figure.figsize'] = figsize
 
-        rc('font', family=fontname, size=fsize)
+        rc('font', size=fsize)
         rc('axes', labelsize='large')
         rc('legend', numpoints=1)
 

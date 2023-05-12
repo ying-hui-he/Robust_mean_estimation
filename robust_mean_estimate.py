@@ -190,8 +190,8 @@ class TModel(object):
 
         return S, tm
     
-'''
-class LevyModel(object):
+
+class FiskModel(object):
     def __init__(self):
         pass
 
@@ -201,12 +201,12 @@ class LevyModel(object):
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * levy.rvs() * (2 * np.random.randint(0,2) - 1)
+                S[i][j] = var * fisk.rvs() * (2 * np.random.randint(0,2) - 1)
         
         S = S + tm
 
         return S, tm
-'''
+
 
 class LognormalModel(object):
     def __init__(self):
@@ -281,7 +281,7 @@ def pre_processing(params, S, indicator):
     eps = params.eps
     idx = np.arange(m)
     np.random.shuffle(idx)
-    K = 1.5 * ceil(eps * m) + 150
+    K = min(int(1.5 * ceil(eps * m) + 150),int(m/2))
     idx_split = np.array_split(idx, K)
     X_grouped = []
     indicator_preprocessing = np.ones(K)
@@ -300,7 +300,7 @@ def pre_processing(params, S, indicator):
     #X_grouped = np.mean(X_grouped, axis=1)
     #print(X_grouped)
     X_grouped = np.array(X_grouped)
-    print('m = {m} change to K = {K}')
+    print('m = {m} change to K = {K}'.format(m = m, K = K))
     params.m = K
     params.eps = ceil(eps * m) / K
     return params, X_grouped, indicator_preprocessing
@@ -671,7 +671,7 @@ class GD_nonsparse(object):
 
         estimated_mean_total = np.zeros(len(estimated_mean))
         j = 0
-        for i in len(estimated_mean):
+        for i in range(len(estimated_mean)):
             estimated_mean_total[i] = estimated_mean[j][0]
             j = j + 1
         total_time = time.time() - start_time
@@ -713,6 +713,8 @@ class Topk_GD(object):
 
         estimated_mean_total = np.zeros(len(stage1_mean))
         j = 0
+        print(stage1_mean)
+        print(estimated_mean)
         for i in pred_k:
             estimated_mean_total[i] = estimated_mean[j][0]
             j = j + 1
@@ -908,8 +910,9 @@ class Top_K(object):
             if np.abs(estimated_mean[i]) >= alpha:
                 top_k_indices.append(i)
         print("Prediction:", top_k_indices)
-        top_k_indices_num = max(1,len(top_k_indices))
-        self.params.k = top_k_indices_num
+        if len(top_k_indices) < 2:
+            top_k_indices = np.argpartition(np.abs(estimated_mean), -2)[-2:]
+        self.params.k = len(top_k_indices)
         return trim_idx_abs(estimated_mean, top_k_indices), top_k_indices
         # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
@@ -1595,6 +1598,7 @@ def trim_k_abs(v, k):
 def trim_idx_abs(v, idx):
     z = np.zeros(len(v))
     if len(idx) == 0: return z
+    if len(idx) == 1: return topk_abs(v, 2)
     for i in idx:
         z[i] = v[i]
 

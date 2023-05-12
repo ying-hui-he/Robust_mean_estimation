@@ -9,6 +9,7 @@ from scipy.stats import pareto
 from scipy.stats import cauchy
 from scipy.stats import levy
 from scipy.stats import t
+from scipy.stats import fisk
 from scipy import special
 from numpy import linalg as LA
 from scipy.sparse import coo_matrix
@@ -189,8 +190,8 @@ class TModel(object):
 
         return S, tm
     
-'''
-class LevyModel(object):
+
+class FiskModel(object):
     def __init__(self):
         pass
 
@@ -200,12 +201,12 @@ class LevyModel(object):
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * levy.rvs() * (2 * np.random.randint(0,2) - 1)
+                S[i][j] = var * fisk.rvs() * (2 * np.random.randint(0,2) - 1)
         
         S = S + tm
 
         return S, tm
-'''
+
 
 class LognormalModel(object):
     def __init__(self):
@@ -280,7 +281,7 @@ def pre_processing(params, S, indicator):
     eps = params.eps
     idx = np.arange(m)
     np.random.shuffle(idx)
-    K = 2 * ceil(eps * m)
+    K = min(int(1.5 * ceil(eps * m) + 150),int(m/2))
     idx_split = np.array_split(idx, K)
     X_grouped = []
     indicator_preprocessing = np.ones(K)
@@ -299,6 +300,7 @@ def pre_processing(params, S, indicator):
     #X_grouped = np.mean(X_grouped, axis=1)
     #print(X_grouped)
     X_grouped = np.array(X_grouped)
+    print('m = {m} change to K = {K}'.format(m = m, K = K))
     params.m = K
     params.eps = ceil(eps * m) / K
     return params, X_grouped, indicator_preprocessing
@@ -655,6 +657,27 @@ class Top_K_Filtered(FilterAlgs):
 """TODO: When to stop the algorithm? How to choose batch size?"""
 
 
+class GD_nonsparse(object):
+
+    def __init__(self, params):
+        self.params = params
+
+    def alg(self, S, indicator):
+        start_time = time.time()
+        S_tmp = matlab.double(S.tolist())
+        tmp = [self.params.eps]
+        tmp = matlab.double(tmp)
+        estimated_mean = eng.robust_mean_pgd(S_tmp, tmp[0][0], 100)
+
+        estimated_mean_total = np.zeros(len(estimated_mean))
+        j = 0
+        for i in range(len(estimated_mean)):
+            estimated_mean_total[i] = estimated_mean[j][0]
+            j = j + 1
+        total_time = time.time() - start_time
+
+        return estimated_mean_total, total_time
+
 class Topk_GD(object):
 
     def __init__(self, params):
@@ -690,6 +713,8 @@ class Topk_GD(object):
 
         estimated_mean_total = np.zeros(len(stage1_mean))
         j = 0
+        print(stage1_mean)
+        print(estimated_mean)
         for i in pred_k:
             estimated_mean_total[i] = estimated_mean[j][0]
             j = j + 1
@@ -866,8 +891,6 @@ class Top_K(object):
         rho = 1
         max_iter = iter_num
 
-        """TODO: Stop Criterion"""
-
         for t in range(max_iter):
             grad_u = np.zeros(d)
             grad_v = np.zeros(d)
@@ -887,8 +910,9 @@ class Top_K(object):
             if np.abs(estimated_mean[i]) >= alpha:
                 top_k_indices.append(i)
         print("Prediction:", top_k_indices)
-        top_k_indices_num = max(1,len(top_k_indices))
-        self.params.k = top_k_indices_num
+        if len(top_k_indices) < 2:
+            top_k_indices = np.argpartition(np.abs(estimated_mean), -2)[-2:]
+        self.params.k = len(top_k_indices)
         return trim_idx_abs(estimated_mean, top_k_indices), top_k_indices
         # print("estimated: ", estimated_mean)
         # top_k_indices = self.top_k_extract(estimated_mean, k)
@@ -914,9 +938,6 @@ class Top_K(object):
         return trim_idx_abs(estimated_mean, pred_k), total_time
 
 
-"""TODO: How much iterations do we need? How to choose batch size? How to set decay rate?"""
-
-
 class Oracle(object):
 
     def __init__(self, params):
@@ -928,27 +949,27 @@ class Oracle(object):
         tm = self.params.tm()
         S_1 = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
         MOM[0] = topk_abs(np.mean(S_1, axis = 0), self.params.k)
-        S_2 = np.array_split(S_1, 2)
+        S_2 = np.array_split(S_1, 10)
         mean_2 = []
         for i in range(len(S_2)):
             mean_2.append(np.mean(S_2[i], axis = 0))
         MOM[1] = topk_abs(np.median(mean_2, axis = 0), self.params.k)
-        S_4 = np.array_split(S_1, 4)
+        S_4 = np.array_split(S_1, 50)
         mean_4 = []
         for i in range(len(S_4)):
             mean_4.append(np.mean(S_4[i], axis = 0))
         MOM[2] = topk_abs(np.median(mean_4, axis = 0), self.params.k)
-        S_5 = np.array_split(S_1, 5)
+        S_5 = np.array_split(S_1, 100)
         mean_5 = []
         for i in range(len(S_5)):
             mean_5.append(np.mean(S_5[i], axis = 0))
         MOM[3] = topk_abs(np.median(mean_5, axis = 0), self.params.k)
-        S_10 = np.array_split(S_1, 10)
+        S_10 = np.array_split(S_1, 150)
         mean_10 = []
         for i in range(len(S_10)):
             mean_10.append(np.mean(S_10[i], axis = 0))
         MOM[4] = topk_abs(np.median(mean_10, axis = 0), self.params.k)
-        S_20 = np.array_split(S_1, 20)
+        S_20 = np.array_split(S_1, 200)
         mean_20 = []
         for i in range(len(S_20)):
             mean_20.append(np.mean(S_20[i], axis = 0))
@@ -1295,7 +1316,8 @@ class plot_data(RunCollection):
     def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m'
+                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m',
+                'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 
         markers = {'RME_sp': 'o',
@@ -1307,7 +1329,13 @@ class plot_data(RunCollection):
                    'Top_K': '.',
                    'GDAlgs':'^',
                    'Top_K_Filtered': 'o',
-                   'Topk_GD':'*'
+                   'Topk_GD':'*',
+                   'NP_sp_npre': 'p',
+                   'RME_sp_npre': 'o', 
+                   'RME_sp_L_npre': 'v', 
+                   'RME_npre': '^', 
+                   'GDAlgs_npre': '^',
+                   'GD_nonsparse': '*'
                    }
 
         labels = {'NP_sp': 'NP_sp',
@@ -1318,8 +1346,14 @@ class plot_data(RunCollection):
                   'RME': 'Filter_nsp',
                   'Top_K': 'Top_K',
                   'Top_K_Filtered': 'Top_K + Filter_sp_LQ',
-                  'GDAlgs':'Sparse GD',
-                  'Topk_GD':'Top_K + Sparse GD'
+                  'GDAlgs': 'Sparse GD',
+                  'Topk_GD': 'Top_K + Sparse GD',
+                  'NP_sp_npre': 'NP_sp_npre',
+                  'RME_sp_npre': 'Filter_sp_LQ_npre', 
+                  'RME_sp_L_npre': 'Filter_sp_L_npre', 
+                  'RME_npre': 'Filter_nsp_npre', 
+                  'GDAlgs_npre': 'Sparse GD_npre',
+                  'GD_nonsparse': 'GD_nonsparse'
                   }
 
         s = len(runs)
@@ -1378,7 +1412,8 @@ class plot_data(RunCollection):
     def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
-                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m'
+                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m',
+                'NP_sp_npre_time': 'gray', 'RME_sp_npre_time': 'skyblue', 'RME_sp_L_npre_time': 'springgreen', 'RME_npre_time': 'tomato', 'GDAlgs_npre_time': 'peachpuff', 'GD_nonsparse_time': 'plum'
                 }
 
         markers = {'RME_sp_time': 'o',
@@ -1390,19 +1425,31 @@ class plot_data(RunCollection):
                    'Top_K_time': '.',
                    'GDAlgs_time':'^',
                    'Top_K_Filtered_time': 'o',
-                   'Topk_GD_time':'*'
+                   'Topk_GD_time':'*',
+                   'NP_sp_npre_time': 'p',
+                   'RME_sp_npre_time': 'o', 
+                   'RME_sp_L_npre_time': 'v', 
+                   'RME_npre_time': '^', 
+                   'GDAlgs_npre_time': '^',
+                   'GD_nonsparse_time': '*'
                    }
 
-        labels = {'NP_sp_time': 'NP',
+        labels = {'NP_sp_time': 'NP_sp',
                   'ransacGaussianMean_time': 'RANSAC',
-                  'RME_sp_time': 'RME_sp',
-                  'RME_sp_L_time': 'RME_sp_L',
-                  'Oracle_time': 'oracle',
-                  'RME_time': 'RME',
+                  'RME_sp_time': 'Filter_sp_LQ',
+                  'RME_sp_L_time': 'Filter_sp_L',
+                  'Oracle_time': 'Oracle',
+                  'RME_time': 'Filter_nsp',
                   'Top_K_time': 'Top_K',
-                  'Top_K_Filtered_time': 'Top_K_Filtered',
-                  'GDAlgs_time':'Sparse GD',
-                  'Topk_GD_time':'Topk_GD'
+                  'Top_K_Filtered_time': 'Top_K + Filter_sp_LQ',
+                  'GDAlgs_time': 'Sparse GD',
+                  'Topk_GD_time': 'Top_K + Sparse GD',
+                  'NP_sp_npre_time': 'NP_sp_npre',
+                  'RME_sp_npre_time': 'Filter_sp_LQ_npre', 
+                  'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
+                  'RME_npre_time': 'Filter_nsp_npre', 
+                  'GDAlgs_npre_time': 'Sparse GD_npre',
+                  'GD_nonsparse': 'GD_nonsparse'
                   }
 
         s = len(runs)
@@ -1552,6 +1599,7 @@ def trim_k_abs(v, k):
 def trim_idx_abs(v, idx):
     z = np.zeros(len(v))
     if len(idx) == 0: return z
+    if len(idx) == 1: return topk_abs(v, 2)
     for i in idx:
         z[i] = v[i]
 

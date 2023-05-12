@@ -1402,8 +1402,7 @@ class plot_data(RunCollection):
         self.plot_xloss(outputfilename, Run, title, xlabel, ylabel,
                         xs, fsize, fpad, figsize, fontname, yscale)
 
-
-
+    def plotxy_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
 
         self.plot_xloss_fromfile(outputfilename, filename, title, xlabel, ylabel, xs=xs, figsize=figsize,
                                  fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)

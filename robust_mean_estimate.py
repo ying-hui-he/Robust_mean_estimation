@@ -36,38 +36,39 @@ plt.rcParams['figure.dpi'] = 150
 
 eng = matlab.engine.start_matlab()
 
+
 class Params(object):
-    def __init__(self, mu = [10, -5, -4, 2], m = 500, tau = 0.2, d = 500, k = 4, eps = 0.1, var = 1, nItrs = 0, mass = 0, tv = 0, fv = 0, group_size = 4, param = 1, J = 40):
-        self.m = m                      #Number of Samples
-        self.d = d                      #Dimention
-        self.k = k                      #Sparsity
-        self.eps = eps                  #Corruption Proportion
-        self.mu = mu                    #True Mean
-        self.var = var                  #Variancce
-        self.tau = tau                  #Delta
-        self.nItrs = nItrs              #Iterations
+    def __init__(self, mu=[10, -5, -4, 2], m=500, tau=0.2, d=500, k=4, eps=0.1, var=1, nItrs=0, mass=0, tv=0, fv=0, group_size=4, param=1, J=40):
+        self.m = m  # Number of Samples
+        self.d = d  # Dimention
+        self.k = k  # Sparsity
+        self.eps = eps  # Corruption Proportion
+        self.mu = mu  # True Mean
+        self.var = var  # Variancce
+        self.tau = tau  # Delta
+        self.nItrs = nItrs  # Iterations
         self.mass = mass
         self.tv = tv
         self.fv = fv
         self.group_size = group_size
         self.param = param
         self.J = J
-        
+
     def tm(self):
         tm = np.append(self.mu, np.zeros(self.d-self.k))
-        return tm                       #Sparse Mean
-        
+        return tm  # Sparse Mean
+
 
 def err_rspca(a, b): return LA.norm(np.outer(a, a)-np.outer(b, b))
 
 
 def err(a, b):
     # print("estimated: ", a)
-    #if a.shape != b.shape:
-        #k = a.shape[0]
-        #b = trim_k_abs(b, k)
-        # print(k)
-        # print(trim_k_abs(b, k))
+    # if a.shape != b.shape:
+    #k = a.shape[0]
+    #b = trim_k_abs(b, k)
+    # print(k)
+    # print(trim_k_abs(b, k))
     # print("tm: ", b)
     return LA.norm(a-b)
 
@@ -85,7 +86,7 @@ class RunCollection(object):
 
 def get_error(f, params, tm):
     return LA.norm(tm - f(params))
-        
+
 
 """Data generate"""
 
@@ -98,7 +99,7 @@ class GaussianModel(object):
         m, d, tm, var = params.m, params.d, params.tm(), params.var
 
         S = var * np.random.randn(m, d) + tm
-        #print(S)
+        # print(S)
         print(tm)
 
         return S, tm
@@ -140,12 +141,13 @@ class PowerlawModel(object):
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * powerlaw.rvs(a) * (2 * np.random.randint(0,2) - 1)
-        
+                S[i][j] = var * powerlaw.rvs(a) * \
+                    (2 * np.random.randint(0, 2) - 1)
+
         S = S + tm
 
         return S, tm
-        
+
 
 class ParetoModel(object):
     def __init__(self):
@@ -158,11 +160,13 @@ class ParetoModel(object):
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * pareto.rvs(param) * (2 * np.random.randint(0,2) - 1)
-        
+                S[i][j] = var * pareto.rvs(param) * \
+                    (2 * np.random.randint(0, 2) - 1)
+
         S = S + tm
 
         return S, tm
+
 
 '''
 class CauchyModel(object):
@@ -176,7 +180,7 @@ class CauchyModel(object):
 
         return S, tm
 '''
-    
+
 
 class TModel(object):
     def __init__(self):
@@ -186,10 +190,10 @@ class TModel(object):
         m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
 
         #df = 2.74
-        S = var * t.rvs(param, size = (m,d)) + tm
+        S = var * t.rvs(param, size=(m, d)) + tm
 
         return S, tm
-    
+
 
 class FiskModel(object):
     def __init__(self):
@@ -201,8 +205,9 @@ class FiskModel(object):
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * fisk.rvs(param) * (2 * np.random.randint(0,2) - 1)
-        
+                S[i][j] = var * fisk.rvs(param) * \
+                    (2 * np.random.randint(0, 2) - 1)
+
         S = S + tm
 
         return S, tm
@@ -219,8 +224,9 @@ class LognormalModel(object):
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * np.random.lognormal() * (2 * np.random.randint(0,2) - 1)
-        #print(S)
+                S[i][j] = var * np.random.lognormal() * \
+                    (2 * np.random.randint(0, 2) - 1)
+        # print(S)
         print(tm)
         S = S + tm
 
@@ -247,19 +253,20 @@ class DenseNoise(object):
         indicator[L:] = 0
 
         print(G)
-        
+
         return G, indicator
-    
+
 
 class GaussianNoise(object):
-    def __init__(self, noise_mean = 20, noise_var = 50):
+    def __init__(self, noise_mean=20, noise_var=50):
         self.noise_mean = noise_mean
         self.noise_var = noise_var
 
     def generate(self, params, S):
         eps, m, d = params.eps, params.m, params.d
 
-        Gaussian_Noise = self.noise_var * np.random.randn(m, d) + self.noise_mean
+        Gaussian_Noise = self.noise_var * \
+            np.random.randn(m, d) + self.noise_mean
 
         G = S.copy()
 
@@ -267,7 +274,7 @@ class GaussianNoise(object):
 
         G[L:] = Gaussian_Noise[L:]
 
-        indicator = np.ones(len(G))     #G[i] is noise iff indicator[i] = 1
+        indicator = np.ones(len(G))  # G[i] is noise iff indicator[i] = 1
         indicator[L:] = 0
         return G, indicator
 
@@ -281,14 +288,14 @@ def pre_processing(params, S, indicator):
     eps = params.eps
     idx = np.arange(m)
     np.random.shuffle(idx)
-    K = min(int(1.5 * ceil(eps * m) + 150),int(m/2))
+    K = min(int(1.5 * ceil(eps * m) + 150), int(m/2))
     idx_split = np.array_split(idx, K)
     X_grouped = []
     indicator_preprocessing = np.ones(K)
     for i in range(K):
         idx_tmp = idx_split[i]
         S_tmp = [S[j] for j in idx_tmp]
-        X_grouped.append(list(np.mean(S_tmp, axis = 0)))
+        X_grouped.append(list(np.mean(S_tmp, axis=0)))
         for h in idx_tmp:
             indicator_preprocessing[i] *= indicator[h]
     '''
@@ -298,9 +305,9 @@ def pre_processing(params, S, indicator):
         X_grouped.append(list(np.mean(i, axis = 0)))
     '''
     #X_grouped = np.mean(X_grouped, axis=1)
-    #print(X_grouped)
+    # print(X_grouped)
     X_grouped = np.array(X_grouped)
-    print('m = {m} change to K = {K}'.format(m = m, K = K))
+    print('m = {m} change to K = {K}'.format(m=m, K=K))
     params.m = K
     params.eps = ceil(eps * m) / K
     return params, X_grouped, indicator_preprocessing
@@ -530,14 +537,14 @@ class FilterAlgs(object):
 
         if self.is_sparse == True:
             # print(topk_abs(np.mean(S, axis=0), k))
-            return topk_abs(np.mean(S, axis=0), k), total_time, 
+            return topk_abs(np.mean(S, axis=0), k), total_time,
         else:
             return np.mean(S, axis=0), total_time
 
 
 class NP_sp_npre(FilterAlgs):
 
-    lfilter, qfilter = False, False       
+    lfilter, qfilter = False, False
 
 
 class NP_sp(FilterAlgs):
@@ -545,10 +552,11 @@ class NP_sp(FilterAlgs):
     lfilter, qfilter = False, False
 
     def alg(self, S, indicator):
-        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        params, S, indicator = pre_processing(
+            params=self.params, S=S, indicator=indicator)
         self.params = params
 
-        return super().alg(S = S, indicator = indicator)
+        return super().alg(S=S, indicator=indicator)
 
 
 class RME_sp_npre(FilterAlgs):
@@ -561,10 +569,11 @@ class RME_sp(FilterAlgs):
     lfilter, qfilter = True, True
 
     def alg(self, S, indicator):
-        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        params, S, indicator = pre_processing(
+            params=self.params, S=S, indicator=indicator)
         self.params = params
 
-        return super().alg(S = S, indicator = indicator)
+        return super().alg(S=S, indicator=indicator)
 
 
 class RME_sp_L_npre(FilterAlgs):
@@ -577,10 +586,11 @@ class RME_sp_L(FilterAlgs):
     lfilter, qfilter = True, False
 
     def alg(self, S, indicator):
-        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        params, S, indicator = pre_processing(
+            params=self.params, S=S, indicator=indicator)
         self.params = params
 
-        return super().alg(S = S, indicator = indicator)
+        return super().alg(S=S, indicator=indicator)
 
 
 class RME_npre(FilterAlgs):
@@ -597,10 +607,11 @@ class RME(FilterAlgs):
     # do_plot_linear = True
 
     def alg(self, S, indicator):
-        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        params, S, indicator = pre_processing(
+            params=self.params, S=S, indicator=indicator)
         self.params = params
 
-        return super().alg(S = S, indicator = indicator)
+        return super().alg(S=S, indicator=indicator)
 
 
 class Top_K_Filtered(FilterAlgs):
@@ -632,25 +643,25 @@ class Top_K_Filtered(FilterAlgs):
         S_trimmed = self.trim_data(S, pred_k)
         time_stage_1 = time.time() - start_time
         #self.params.d = pred_k
-        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
-        #print('ATTENTION!')
-        #print(mean)
+        mean, time_stage_2 = super().alg(S_trimmed, indicator)
+        # print('ATTENTION!')
+        # print(mean)
         if type(mean) == int:
             mean = np.zeros(len(stage1_mean))
-        #print(top_indices)
-        #print(stage1_mean)
+        # print(top_indices)
+        # print(stage1_mean)
         final_mean = np.zeros(len(stage1_mean))
-        #print(final_mean)
-        #for i in range(len(top_indices)):
+        # print(final_mean)
+        # for i in range(len(top_indices)):
 
-            #final_mean[top_indices[i]] = mean[i]
+        #final_mean[top_indices[i]] = mean[i]
 
         j = 0
         for i in pred_k:
             final_mean[i] = mean[j]
             j = j + 1
 
-        #print(final_mean)
+        # print(final_mean)
         return final_mean, time_stage_1 + time_stage_2
 
 
@@ -678,11 +689,12 @@ class GD_nonsparse(object):
 
         return estimated_mean_total, total_time
 
+
 class Topk_GD(object):
 
     def __init__(self, params):
         self.params = params
-    
+
     def top_k_extract(self, arr, k):
         """Output the top k indices of arr."""
         return np.argpartition(np.abs(arr), -k)[-k:]
@@ -704,7 +716,6 @@ class Topk_GD(object):
         #top_indices = self.top_k_extract(stage1_mean, pred_k)
         #S_trimmed = self.trim_data(S, top_indices)
         S_trimmed = self.trim_data(S, pred_k)
-
 
         S_trimmed = matlab.double(S_trimmed.tolist())
         tmp = [self.params.eps]
@@ -774,20 +785,25 @@ class GDAlgs_npre(object):
                 Sigma_w = (X.T @ spdiags(w, 0, m, m) @ X) - np.outer(Xw, Xw)
                 Sigma_w_minus_I = Sigma_w - np.eye(d)
                 #print('here2', Sigma_w_minus_I.diagonal())
-                #find indices of largest k entries of each row of Sigma_w_minus_I
-                largest_k_each_row_index_array = np.argpartition(Sigma_w_minus_I, kth=-k, axis=-1)[:, -k:]
-                #find corresponding entries
-                largest_k_each_row = np.take_along_axis(Sigma_w_minus_I, largest_k_each_row_index_array, axis=-1)
-                #find squared F norm of each of these rows
-                squared_F_norm_of_each_row = np.sum(largest_k_each_row * largest_k_each_row, axis=-1)
-                #find indices of largest k rows
-                largest_rows_index_array = np.argpartition(squared_F_norm_of_each_row, kth=-k)[-k:]
-                cur_obj = np.sum(squared_F_norm_of_each_row[largest_rows_index_array])
-                
-                #we are done
-                #print(cur_obj)
+                # find indices of largest k entries of each row of Sigma_w_minus_I
+                largest_k_each_row_index_array = np.argpartition(
+                    Sigma_w_minus_I, kth=-k, axis=-1)[:, -k:]
+                # find corresponding entries
+                largest_k_each_row = np.take_along_axis(
+                    Sigma_w_minus_I, largest_k_each_row_index_array, axis=-1)
+                # find squared F norm of each of these rows
+                squared_F_norm_of_each_row = np.sum(
+                    largest_k_each_row * largest_k_each_row, axis=-1)
+                # find indices of largest k rows
+                largest_rows_index_array = np.argpartition(
+                    squared_F_norm_of_each_row, kth=-k)[-k:]
+                cur_obj = np.sum(
+                    squared_F_norm_of_each_row[largest_rows_index_array])
+
+                # we are done
+                # print(cur_obj)
                 if previous_obj != -1 and cur_obj < previous_obj and cur_obj > previous_obj - tol * previous_obj:
-                    break     
+                    break
                 if previous_obj == -1 or cur_obj <= previous_obj:
                     step_size *= 2
                 else:
@@ -797,16 +813,20 @@ class GDAlgs_npre(object):
                 previous_obj = cur_obj
                 previous_w = w
                 psi_w = np.zeros((d, d), dtype=int)
-                largest_k_each_row_index_array = largest_k_each_row_index_array[largest_rows_index_array]
-                #psi is indicator matrix with 1s corresponding to entries included in F,k,k norm, and 0 elsewhere
-                psi_w[largest_rows_index_array, largest_k_each_row_index_array.T] = 1
+                largest_k_each_row_index_array = largest_k_each_row_index_array[
+                    largest_rows_index_array]
+                # psi is indicator matrix with 1s corresponding to entries included in F,k,k norm, and 0 elsewhere
+                psi_w[largest_rows_index_array,
+                      largest_k_each_row_index_array.T] = 1
 
                 psi_w = coo_matrix(psi_w)
 
                 Z_w = psi_w.multiply(Sigma_w_minus_I)
 
-                X_T_Z_w_X_diag = np.sum(Z_w.data * (X.T[psi_w.row, :] * X.T[psi_w.col, :]).T, axis=-1)
-                nabla_f_w = (X_T_Z_w_X_diag - (X @ (Z_w @ (X.T @ w))) - (X @ (Z_w.T @ (X.T @ w)))) / sparse_norm(Z_w)
+                X_T_Z_w_X_diag = np.sum(
+                    Z_w.data * (X.T[psi_w.row, :] * X.T[psi_w.col, :]).T, axis=-1)
+                nabla_f_w = (X_T_Z_w_X_diag - (X @ (Z_w @ (X.T @ w))) -
+                             (X @ (Z_w.T @ (X.T @ w)))) / sparse_norm(Z_w)
             else:
                 Xw = X.T @ w
                 #Sigma_w = np.cov(X, rowvar = 0)
@@ -816,15 +836,20 @@ class GDAlgs_npre(object):
                 print(np.allclose(Sigma_w, Sigma_w.T, rtol=1e-05, atol=1e-08))
                 Sigma_w_minus_I = Sigma_w - np.eye(d)
                 #print('here2', Sigma_w_minus_I.diagonal())
-                #find indices of largest k entries of each row of Sigma_w_minus_I
-                largest_k_each_row_index_array = np.argpartition(Sigma_w_minus_I, kth=-k, axis=-1)[:, -k:]
-                #find corresponding entries
-                largest_k_each_row = np.take_along_axis(Sigma_w_minus_I, largest_k_each_row_index_array, axis=-1)
-                #find squared F norm of each of these rows
-                squared_F_norm_of_each_row = np.sum(largest_k_each_row * largest_k_each_row, axis=-1)
-                #find indices of largest k rows
-                largest_rows_index_array = np.argpartition(squared_F_norm_of_each_row, kth=-k)[-k:]
-                cur_obj = np.sum(squared_F_norm_of_each_row[largest_rows_index_array])
+                # find indices of largest k entries of each row of Sigma_w_minus_I
+                largest_k_each_row_index_array = np.argpartition(
+                    Sigma_w_minus_I, kth=-k, axis=-1)[:, -k:]
+                # find corresponding entries
+                largest_k_each_row = np.take_along_axis(
+                    Sigma_w_minus_I, largest_k_each_row_index_array, axis=-1)
+                # find squared F norm of each of these rows
+                squared_F_norm_of_each_row = np.sum(
+                    largest_k_each_row * largest_k_each_row, axis=-1)
+                # find indices of largest k rows
+                largest_rows_index_array = np.argpartition(
+                    squared_F_norm_of_each_row, kth=-k)[-k:]
+                cur_obj = np.sum(
+                    squared_F_norm_of_each_row[largest_rows_index_array])
                 print(cur_obj)
 
                 Xw = np.matmul(X.T, w)
@@ -836,12 +861,13 @@ class GDAlgs_npre(object):
                 u = u[:, 0]
                 Xu = X @ u
                 #print(w.T, Xu)
-                print(X.shape, w.shape, Xu.shape, u.shape, (X.T @ w).shape,np.inner(u, (X.T @ w)))
+                print(X.shape, w.shape, Xu.shape, u.shape,
+                      (X.T @ w).shape, np.inner(u, (X.T @ w)))
                 nabla_f_w = Xu * Xu - (2 * np.inner(u, (X.T @ w))) @ Xu
-            w = w - step_size * nabla_f_w/ LA.norm(nabla_f_w)
-            #print(w)
+            w = w - step_size * nabla_f_w / LA.norm(nabla_f_w)
+            # print(w)
             w = self.project_onto_capped_simplex_simple(w, (1/(m - eps_m)))
-            #print(w.shape)
+            # print(w.shape)
         total_time = time.time() - start_time
         print('Time to run GD ', total_time)
         mu_gd = topk_abs(np.sum(w * X.T, axis=1), k)
@@ -851,10 +877,11 @@ class GDAlgs_npre(object):
 class GDAlgs(GDAlgs_npre):
 
     def alg(self, S, indicator):
-        params, S, indicator = pre_processing(params = self.params, S = S, indicator = indicator)
+        params, S, indicator = pre_processing(
+            params=self.params, S=S, indicator=indicator)
         self.params = params
 
-        return super().alg(S = S, indicator = indicator)
+        return super().alg(S=S, indicator=indicator)
 
 
 class Top_K(object):
@@ -921,7 +948,6 @@ class Top_K(object):
         # return topk_abs(estimated_mean, k)
 
     def alg(self, S, indicator):
-        
         """Main algorithm."""
         # top_indices = self.GD(S)
         # S_new = self.trim_data(S, top_indices)
@@ -932,7 +958,7 @@ class Top_K(object):
         self.params = params
         estimated_mean, pred_k = self.GD(S, 200)
         start_time = time.time()
-        estimated_mean, _ = self.GD(S,600)
+        estimated_mean, _ = self.GD(S, 600)
         total_time = time.time() - start_time
 
         return trim_idx_abs(estimated_mean, pred_k), total_time
@@ -945,36 +971,37 @@ class Oracle(object):
 
     def alg(self, S, indicator):
         start_time = time.time()
-        MOM = [0,0,0,0,0,0]
+        MOM = [0, 0, 0, 0, 0, 0]
         tm = self.params.tm()
-        S_1 = np.array([S[i] for i in range(len(indicator)) if indicator[i]!=0])
-        MOM[0] = topk_abs(np.mean(S_1, axis = 0), self.params.k)
+        S_1 = np.array([S[i]
+                       for i in range(len(indicator)) if indicator[i] != 0])
+        MOM[0] = topk_abs(np.mean(S_1, axis=0), self.params.k)
         S_2 = np.array_split(S_1, 10)
         mean_2 = []
         for i in range(len(S_2)):
-            mean_2.append(np.mean(S_2[i], axis = 0))
-        MOM[1] = topk_abs(np.median(mean_2, axis = 0), self.params.k)
+            mean_2.append(np.mean(S_2[i], axis=0))
+        MOM[1] = topk_abs(np.median(mean_2, axis=0), self.params.k)
         S_4 = np.array_split(S_1, 50)
         mean_4 = []
         for i in range(len(S_4)):
-            mean_4.append(np.mean(S_4[i], axis = 0))
-        MOM[2] = topk_abs(np.median(mean_4, axis = 0), self.params.k)
+            mean_4.append(np.mean(S_4[i], axis=0))
+        MOM[2] = topk_abs(np.median(mean_4, axis=0), self.params.k)
         S_5 = np.array_split(S_1, 100)
         mean_5 = []
         for i in range(len(S_5)):
-            mean_5.append(np.mean(S_5[i], axis = 0))
-        MOM[3] = topk_abs(np.median(mean_5, axis = 0), self.params.k)
+            mean_5.append(np.mean(S_5[i], axis=0))
+        MOM[3] = topk_abs(np.median(mean_5, axis=0), self.params.k)
         S_10 = np.array_split(S_1, 150)
         mean_10 = []
         for i in range(len(S_10)):
-            mean_10.append(np.mean(S_10[i], axis = 0))
-        MOM[4] = topk_abs(np.median(mean_10, axis = 0), self.params.k)
+            mean_10.append(np.mean(S_10[i], axis=0))
+        MOM[4] = topk_abs(np.median(mean_10, axis=0), self.params.k)
         S_20 = np.array_split(S_1, 200)
         mean_20 = []
         for i in range(len(S_20)):
-            mean_20.append(np.mean(S_20[i], axis = 0))
-        MOM[5] = topk_abs(np.median(mean_20, axis = 0), self.params.k)
-        MOM_loss = [0,0,0,0,0,0]
+            mean_20.append(np.mean(S_20[i], axis=0))
+        MOM[5] = topk_abs(np.median(mean_20, axis=0), self.params.k)
+        MOM_loss = [0, 0, 0, 0, 0, 0]
         for i in range(6):
             MOM_loss[i] = LA.norm(MOM[i]-tm)
         index = np.argmin(MOM_loss)
@@ -998,7 +1025,7 @@ class ransacGaussianMean(object):
         tau = self.params.tau
 
         T_naive = np.sqrt(2*np.log(m*d/tau))
-       
+
         med = np.median(S, axis=0)
         S = S[np.max(np.abs(med-S), axis=1) < T_naive]
 
@@ -1006,11 +1033,11 @@ class ransacGaussianMean(object):
 
         ransacN = S.shape[0]//2
         print("ransacN", ransacN)
-        
-        if ransacN > m: 
+
+        if ransacN > m:
             print("Ransac, Here")
             return topk_abs(empmean, k), time.time() - start_time
-        
+
         numIters = 200
         # thresh = d*np.log(d) + 2*(np.sqrt(d* np.log(d) * np.log(m/tau)) + np.log(m/tau)) + (eps**2)*(np.log(1/eps))**2
         thresh = d + np.sqrt(d)
@@ -1025,11 +1052,11 @@ class ransacGaussianMean(object):
         # print("Mean inlier val:", np.mean(sum([(LA.norm(S[i]-empmean) < np.sqrt(thresh)) for i in np.arange(len(S)) if indicator[i]!=0])))
         # print("Mean outlier val:", np.mean(sum([(LA.norm(S[i]-empmean) < np.sqrt(thresh)) for i in np.arange(len(S)) if indicator[i]==0])))
 
-        
         for i in np.arange(1, numIters, 1):
             ransacS = S[np.random.choice(S.shape[0], ransacN, replace=False)]
             ransacMean = np.mean(ransacS, axis=0)
-            curInliers = sum([(LA.norm(x-ransacMean) < np.sqrt(thresh)) for x in S])
+            curInliers = sum(
+                [(LA.norm(x-ransacMean) < np.sqrt(thresh)) for x in S])
             # curInliers = (S[LA.norm(S-ransacMean) < np.sqrt(thresh)]).shape[0]
             # print(curInliers)
             print(curInliers, bestInliers)
@@ -1043,11 +1070,10 @@ class ransacGaussianMean(object):
             #     bestMean = ransacMean
             #     bestMedian = curMedian
 
-
         # print(bestMean)
         total_time = time.time() - start_time
         return topk_abs(bestMean, k), total_time
-    
+
 
 class load_data(RunCollection):
 
@@ -1190,7 +1216,7 @@ class load_data(RunCollection):
                 self.params.m = xvar * 80
                 self.params.mu = np.ones(xvar) * 2
 
-            #if y_is_m == False:
+            # if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
             S, tm = self.model.generate(self.params)
             S, indicator = self.noise_model.generate(self.params, S)
@@ -1222,7 +1248,8 @@ class load_data(RunCollection):
                 estimated_mean, running_time = func.alg(S_copy, indicator_copy)
                 results.setdefault(f.__name__, []).append(
                     self.loss(estimated_mean, tm))
-                results.setdefault(f.__name__ + '_time', []).append(running_time)
+                results.setdefault(f.__name__ + '_time', []
+                                   ).append(running_time)
 
             '''
             else:
@@ -1241,7 +1268,7 @@ class load_data(RunCollection):
         self.setdata(xvar_name, trials, xs)
         with open(filename, 'wb') as g:
             pickle.dump(self.Run.runs, g, -1)
-        
+
         end_time = time.perf_counter()
         runtime = end_time - start_time
         print("runtime:", runtime)
@@ -1279,9 +1306,8 @@ class load_data(RunCollection):
             results.setdefault(f.__name__, []).append(heat)
         # print("heatmap results:", results)
         return results
-                
 
-    def setdata_tofile_heatmap(self, filename, trials, xs = [], ys = []):
+    def setdata_tofile_heatmap(self, filename, trials, xs=[], ys=[]):
         start_time = time.perf_counter()
         self.setdata_heatmap(trials, xs, ys)
         with open(filename, 'wb') as g:
@@ -1318,10 +1344,10 @@ class plot_data(RunCollection):
             ans = pickle.load(g)
         return ans
 
-    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'b', 'Top_K': 'g', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
+                'NP_sp': 'k', 'Oracle': 'b', 'Top_K': 'g', 'Top_K_Filtered': 'palevioletred', 'GDAlgs': 'sandybrown', 'Topk_GD': 'tomato',
                 'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 
@@ -1332,13 +1358,13 @@ class plot_data(RunCollection):
                    'NP_sp': 'p',
                    'Oracle': 'x',
                    'Top_K': '.',
-                   'GDAlgs':'^',
+                   'GDAlgs': '^',
                    'Top_K_Filtered': 'o',
-                   'Topk_GD':'*',
+                   'Topk_GD': '*',
                    'NP_sp_npre': 'p',
-                   'RME_sp_npre': 'o', 
-                   'RME_sp_L_npre': 'v', 
-                   'RME_npre': '^', 
+                   'RME_sp_npre': 'o',
+                   'RME_sp_L_npre': 'v',
+                   'RME_npre': '^',
                    'GDAlgs_npre': '^',
                    'GD_nonsparse': '*'
                    }
@@ -1354,24 +1380,24 @@ class plot_data(RunCollection):
                   'GDAlgs': 'Sparse GD',
                   'Topk_GD': 'Full',
                   'NP_sp_npre': 'NP_sp_npre',
-                  'RME_sp_npre': 'Filter_sp_LQ_npre', 
-                  'RME_sp_L_npre': 'Filter_sp_L_npre', 
-                  'RME_npre': 'Filter_nsp_npre', 
+                  'RME_sp_npre': 'Filter_sp_LQ_npre',
+                  'RME_sp_L_npre': 'Filter_sp_L_npre',
+                  'RME_npre': 'Filter_nsp_npre',
                   'GDAlgs_npre': 'Sparse GD_npre',
                   'GD_nonsparse': 'GD_nonsparse'
                   }
 
         s = len(runs)
-        #print(runs)
+        # print(runs)
         str_keys = [key.__name__ for key in self.keys]
-        #print(str_keys)
+        # print(str_keys)
         #str_keys_time = [key.__name__ + '_time' for key in self.keys]
-        #print(str_keys_time)
+        # print(str_keys_time)
 
         for key in str_keys:
-            #print(key)
+            # print(key)
             A = np.array([res[key] for res in runs])
-            #print(A)
+            # print(A)
             '''
             if explicit_xs == False:
                 xs = np.arange(*bounds)
@@ -1398,14 +1424,14 @@ class plot_data(RunCollection):
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.xticks(color='k', fontsize=12)
         plt.yticks(color='k', fontsize=12)
-        plt.legend(prop={'size' : 14})
+        plt.legend(prop={'size': 14})
         plt.yscale(yscale)
-        plt.xlim(5,50)
-        #plt.ylim(*ylims)
+        plt.xlim(5, 50)
+        # plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
         Run = self.readdata(filename)
         self.plot_xloss(outputfilename, Run, title, xlabel, ylabel,
                         xs, fsize, fpad, figsize, fontname, yscale)
@@ -1416,10 +1442,10 @@ class plot_data(RunCollection):
                                  fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.figure()
 
-    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
 
         cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
-                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m',
+                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time': 'sandybrown', 'Topk_GD_time': 'm',
                 'NP_sp_npre_time': 'gray', 'RME_sp_npre_time': 'skyblue', 'RME_sp_L_npre_time': 'springgreen', 'RME_npre_time': 'tomato', 'GDAlgs_npre_time': 'peachpuff', 'GD_nonsparse_time': 'plum'
                 }
 
@@ -1430,13 +1456,13 @@ class plot_data(RunCollection):
                    'NP_sp_time': 'p',
                    'Oracle_time': 'x',
                    'Top_K_time': '.',
-                   'GDAlgs_time':'^',
+                   'GDAlgs_time': '^',
                    'Top_K_Filtered_time': 'o',
-                   'Topk_GD_time':'*',
+                   'Topk_GD_time': '*',
                    'NP_sp_npre_time': 'p',
-                   'RME_sp_npre_time': 'o', 
-                   'RME_sp_L_npre_time': 'v', 
-                   'RME_npre_time': '^', 
+                   'RME_sp_npre_time': 'o',
+                   'RME_sp_L_npre_time': 'v',
+                   'RME_npre_time': '^',
                    'GDAlgs_npre_time': '^',
                    'GD_nonsparse_time': '*'
                    }
@@ -1452,19 +1478,19 @@ class plot_data(RunCollection):
                   'GDAlgs_time': 'Sparse GD',
                   'Topk_GD_time': 'Top_K + Sparse GD',
                   'NP_sp_npre_time': 'NP_sp_npre',
-                  'RME_sp_npre_time': 'Filter_sp_LQ_npre', 
-                  'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
-                  'RME_npre_time': 'Filter_nsp_npre', 
+                  'RME_sp_npre_time': 'Filter_sp_LQ_npre',
+                  'RME_sp_L_npre_time': 'Filter_sp_L_npre',
+                  'RME_npre_time': 'Filter_nsp_npre',
                   'GDAlgs_npre_time': 'Sparse GD_npre',
                   'GD_nonsparse_time': 'GD_nonsparse'
                   }
 
         s = len(runs)
-        #print(runs)
+        # print(runs)
         #str_keys = [key.__name__ for key in self.keys]
-        #print(str_keys)
+        # print(str_keys)
         str_keys_time = [key.__name__ + '_time' for key in self.keys]
-        #print(str_keys_time)
+        # print(str_keys_time)
 
         for key in str_keys_time:
             print(key)
@@ -1496,7 +1522,7 @@ class plot_data(RunCollection):
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.legend()
         plt.yscale(yscale)
-        #plt.ylim(*ylims)
+        # plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
@@ -1511,7 +1537,7 @@ class plot_data(RunCollection):
                                  fsize=fsize, fpad=fpad, xs=xs, fontname=fontname, yscale=yscale)
         plt.figure()
 
-    def plot_heatmap(self, outputfilename, runs, title, xlabel, ylabel, xs=[], ys = [],fsize=10, fpad=10, figsize=(1,1), fontname='Arial', yscale = 'linear'):
+    def plot_heatmap(self, outputfilename, runs, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
 
         f = self.keys
         key = f.__name__
@@ -1537,19 +1563,18 @@ class plot_data(RunCollection):
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.savefig(outputfilename, bbox_inches='tight')
 
-
-    def plot_heatmap_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_heatmap_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
         Run = self.readdata(filename)
         self.plot_heatmap(outputfilename, Run, title, xlabel, ylabel,
-                        xs, ys,fsize, fpad, figsize, fontname, yscale)
+                          xs, ys, fsize, fpad, figsize, fontname, yscale)
 
     def plotheatmap_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], ys=[], fontname='Arial', yscale='linear'):
 
         self.plot_heatmap_fromfile(outputfilename, filename, title, xlabel, ylabel, xs=xs, ys=ys, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+                                   fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.show()
 
-    def plot_3_heatmap(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs=[], ys = [],fsize=10, fpad=10, figsize=(1,1), fontname='Arial', yscale = 'linear'):
+    def plot_3_heatmap(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
 
         f = self.keys
         key = f.__name__
@@ -1568,18 +1593,22 @@ class plot_data(RunCollection):
 
         fig, axs = plt.subplots(1, 3, figsize=(12, 4))
         # im = ax.imshow(A, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
-        im1 = axs[0].imshow(A1, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        im1 = axs[0].imshow(A1, cmap=mpl.colormaps['YlGn'],
+                            interpolation='bicubic')
         axs[0].set_title('Lognormal')
 
-        im2 = axs[1].imshow(A2, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        im2 = axs[1].imshow(A2, cmap=mpl.colormaps['YlGn'],
+                            interpolation='bicubic')
         axs[1].set_title('Pareto')
 
-        im3 = axs[2].imshow(A3, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        im3 = axs[2].imshow(A3, cmap=mpl.colormaps['YlGn'],
+                            interpolation='bicubic')
         axs[2].set_title('Student T')
 
         for i in range(3):
             axs[i].set_xticks(np.arange(len(xs)), labels=xs)
             axs[i].set_yticks(np.arange(len(ys)), labels=ys[::-1])
+            axs[i].set_xlabel('Sample size (n)')
 
         # ax.set_title(title)
         # for i in range(len(xs)):
@@ -1589,24 +1618,26 @@ class plot_data(RunCollection):
 
         # cbar = ax.figure.colorbar(im, ax=ax)
         # cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
-        fig.colorbar(im3, ax=axs, orientation='vertical')
+        cbar = fig.colorbar(im1, ax=axs, orientation='vertical', shrink=0.7)
+        cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
         # plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         # plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
+        fig.text(0.08, 0.5, 'Sparsity (k)', va='center', rotation='vertical', fontsize=12)
         plt.savefig(outputfilename, bbox_inches='tight')
 
-
-    def plot_3_heatmap_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_heatmap_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
         Run1 = self.readdata(filename1)
         Run2 = self.readdata(filename2)
         Run3 = self.readdata(filename3)
         self.plot_3_heatmap(outputfilename, Run1, Run2, Run3, title, xlabel, ylabel,
-                        xs, ys,fsize, fpad, figsize, fontname, yscale)
+                            xs, ys, fsize, fpad, figsize, fontname, yscale)
 
     def plotheatmap_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], ys=[], fontname='Arial', yscale='linear'):
 
         self.plot_3_heatmap_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=xs, ys=ys, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+                                     fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.show()
+
 
 """ P(x) for quadratic filter """
 
@@ -1622,25 +1653,26 @@ def p(X, mu, M):
 """ Thing that thresholds to the largest k entries indicaors """
 
 
-def indicat(M, k): 
-    
+def indicat(M, k):
     """
     creates an indicator matrix for 
     the largest k diagonal entries and 
     largest k**2 - k off-diagonal entries
     """
-    
+
     ans = np.zeros(M.shape)
 
-    u = np.argpartition(M.diagonal(), -k)[-k:] # Finds largest k indices of the diagonal 
-    ans[(u,u)] = 1
+    # Finds largest k indices of the diagonal
+    u = np.argpartition(M.diagonal(), -k)[-k:]
+    ans[(u, u)] = 1
 
-    idx = np.where(~np.eye(M.shape[0],dtype=bool)) # Change this too
-    val = np.partition(M[idx].flatten(), -k**2+k)[-k**2+k] # (k**2 - k)th largest off-diagonl element
+    idx = np.where(~np.eye(M.shape[0], dtype=bool))  # Change this too
+    # (k**2 - k)th largest off-diagonl element
+    val = np.partition(M[idx].flatten(), -k**2+k)[-k**2+k]
     idx2 = np.where(M > val)
-    
+
     ans[idx2] = 1
-    
+
     return (ans, u)
 
 
@@ -1664,8 +1696,10 @@ def trim_k_abs(v, k):
 
 def trim_idx_abs(v, idx):
     z = np.zeros(len(v))
-    if len(idx) == 0: return z
-    if len(idx) == 1: return topk_abs(v, 2)
+    if len(idx) == 0:
+        return z
+    if len(idx) == 1:
+        return topk_abs(v, 2)
     for i in idx:
         z[i] = v[i]
 

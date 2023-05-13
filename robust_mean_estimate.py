@@ -1400,7 +1400,7 @@ class plot_data(RunCollection):
         plt.yticks(color='k', fontsize=12)
         plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
-        plt.xlim(1.1,2.9)
+        plt.xlim(5,50)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()

@@ -1514,18 +1514,18 @@ class plot_data(RunCollection):
         print("heatmap input:", A)
 
         fig, ax = plt.subplots()
-        im = ax.imshow(A, cmap=mpl.colormaps['YlGn'])
+        im = ax.imshow(A, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
 
         ax.set_xticks(np.arange(len(xs)), labels=xs)
         ax.set_yticks(np.arange(len(ys)), labels=ys[::-1])
         ax.set_title(title)
-        for i in range(len(xs)):
-            for j in range(len(ys)):
-                text = ax.text(i, j, round(A[j, i],2),
-                       ha="center", va="center", color="black")
+        # for i in range(len(xs)):
+        #     for j in range(len(ys)):
+        #         text = ax.text(i, j, round(A[j, i],2),
+        #                ha="center", va="center", color="black")
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
-
+        # plt.grid(True, which='both', color='grey', linewidth=0.3)
         plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.savefig(outputfilename, bbox_inches='tight')

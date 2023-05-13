@@ -1541,6 +1541,65 @@ class plot_data(RunCollection):
                                  fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.show()
 
+    def plot_3_heatmap(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs=[], ys = [],fsize=10, fpad=10, figsize=(1,1), fontname='Arial', yscale = 'linear'):
+
+        f = self.keys
+        key = f.__name__
+
+        A1 = np.array([res[key] for res in runs1])
+        A1 = np.median(A1, axis=0)
+        print("heatmap input:", A1)
+
+        A2 = np.array([res[key] for res in runs2])
+        A2 = np.median(A2, axis=0)
+        print("heatmap input:", A2)
+
+        A3 = np.array([res[key] for res in runs3])
+        A3 = np.median(A3, axis=0)
+        print("heatmap input:", A3)
+
+        fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+        # im = ax.imshow(A, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        im1 = axs[0].imshow(A1, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        axs[0].set_title('Lognormal')
+
+        im2 = axs[1].imshow(A2, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        axs[1].set_title('Pareto')
+
+        im3 = axs[2].imshow(A3, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
+        axs[2].set_title('Student T')
+
+        for i in range(3):
+            axs[i].set_xticks(np.arange(len(xs)), labels=xs)
+            axs[i].set_yticks(np.arange(len(ys)), labels=ys[::-1])
+
+        # ax.set_title(title)
+        # for i in range(len(xs)):
+        #     for j in range(len(ys)):
+        #         text = ax.text(i, j, round(A[j, i],2),
+        #                ha="center", va="center", color="black")
+
+        # cbar = ax.figure.colorbar(im, ax=ax)
+        # cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+        fig.colorbar(im3, ax=axs, orientation='vertical')
+        # plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
+        # plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
+        plt.savefig(outputfilename, bbox_inches='tight')
+
+
+    def plot_3_heatmap_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], ys=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+        Run1 = self.readdata(filename1)
+        Run2 = self.readdata(filename2)
+        Run3 = self.readdata(filename3)
+        self.plot_3_heatmap(outputfilename, Run1, Run2, Run3, title, xlabel, ylabel,
+                        xs, ys,fsize, fpad, figsize, fontname, yscale)
+
+    def plotheatmap_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], ys=[], fontname='Arial', yscale='linear'):
+
+        self.plot_3_heatmap_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=xs, ys=ys, figsize=figsize,
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+        plt.show()
+
 """ P(x) for quadratic filter """
 
 

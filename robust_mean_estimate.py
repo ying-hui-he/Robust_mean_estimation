@@ -1185,6 +1185,11 @@ class load_data(RunCollection):
             elif xvar_name == 'group_size':
                 self.params.group_size = xvar
 
+            elif xvar_name == 'm_k':
+                self.params.k = xvar
+                self.params.m = xvar * 80
+                self.params.mu = np.ones(xvar) * 2
+
             #if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
             S, tm = self.model.generate(self.params)
@@ -1316,7 +1321,7 @@ class plot_data(RunCollection):
     def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'darkseagreen', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'m',
+                'NP_sp': 'k', 'Oracle': 'b', 'Top_K': 'g', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
                 'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 
@@ -1344,10 +1349,10 @@ class plot_data(RunCollection):
                   'RME_sp_L': 'Filter_sp_L',
                   'Oracle': 'Oracle',
                   'RME': 'Filter_nsp',
-                  'Top_K': 'Top_K',
+                  'Top_K': 'Stage 1',
                   'Top_K_Filtered': 'Top_K + Filter_sp_LQ',
                   'GDAlgs': 'Sparse GD',
-                  'Topk_GD': 'Top_K + Sparse GD',
+                  'Topk_GD': 'Full',
                   'NP_sp_npre': 'NP_sp_npre',
                   'RME_sp_npre': 'Filter_sp_LQ_npre', 
                   'RME_sp_L_npre': 'Filter_sp_L_npre', 
@@ -1376,9 +1381,9 @@ class plot_data(RunCollection):
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-            plt.fill_between(xs, mins, maxs, color=cols[key], alpha=0.2)
+            plt.fill_between(xs, mins, maxs, alpha=0.2)
             plt.plot(xs, np.median(A, axis=0),
-                     label=labels[key], color=cols[key], marker=markers[key])
+                     label=labels[key], marker=markers[key])
 
         #p = copy.copy(self.params)
 
@@ -1391,8 +1396,11 @@ class plot_data(RunCollection):
         plt.title(title, pad=fpad, fontsize=fsize)
         plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
-        plt.legend()
+        plt.xticks(color='k', fontsize=12)
+        plt.yticks(color='k', fontsize=12)
+        plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
+        plt.xlim(5,50)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()

@@ -603,6 +603,55 @@ class RME(FilterAlgs):
         return super().alg(S = S, indicator = indicator)
 
 
+class Stage2_filter(FilterAlgs):
+
+    lfilter, qfilter = True, True
+
+    def __init__(self, params):
+        self.params = params
+
+    def top_k_extract(self, arr, k):
+        """Output the top k indices of arr."""
+        return np.argpartition(np.abs(arr), -k)[-k:]
+
+    def trim_data(self, S, top_indices):
+        """Set the non-top-k coordinates to 0 for every data point."""
+        k = self.params.k
+        S_new = S[:, top_indices]
+        self.params.d = k
+        return S_new
+
+    def alg(self, S, indicator):
+        """Main algorithm."""
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
+        start_time = time.time()
+        k = self.params.k
+        d = self.params.d
+        #stage1_mean, pred_k = Top_K.GD(self, S, 200)
+        S_trimmed = S[:,0:k]
+        self.params.d = k
+        time_stage_1 = time.time() - start_time
+        #self.params.d = pred_k
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+        #print('ATTENTION!')
+        #print(mean)
+        if type(mean) == int:
+            mean = np.zeros(d)
+        #print(top_indices)
+        #print(stage1_mean)
+        final_mean = np.zeros(d)
+        #print(final_mean)
+        #for i in range(len(top_indices)):
+
+            #final_mean[top_indices[i]] = mean[i]
+
+        for i in range(k):
+            final_mean[i] = mean[i]
+
+        #print(final_mean)
+        return final_mean, time_stage_1 + time_stage_2
+
 class Top_K_Filtered(FilterAlgs):
 
     lfilter, qfilter = True, True
@@ -654,8 +703,6 @@ class Top_K_Filtered(FilterAlgs):
         return final_mean, time_stage_1 + time_stage_2
 
 
-"""TODO: When to stop the algorithm? How to choose batch size?"""
-
 
 class GD_nonsparse(object):
 
@@ -677,6 +724,49 @@ class GD_nonsparse(object):
         total_time = time.time() - start_time
 
         return estimated_mean_total, total_time
+
+
+class Stage2_GD(object):
+
+    def __init__(self, params):
+        self.params = params
+    
+    def top_k_extract(self, arr, k):
+        """Output the top k indices of arr."""
+        return np.argpartition(np.abs(arr), -k)[-k:]
+
+    def trim_data(self, S, top_indices):
+        """Set the non-top-k coordinates to 0 for every data point."""
+        k = self.params.k
+        S_new = S[:, top_indices]
+        self.params.d = k
+        return S_new
+
+    def alg(self, S, indicator):
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
+        start_time = time.time()
+        k = self.params.k
+        d = self.params.d
+
+        #stage1_mean, pred_k = Top_K.GD(self, S, 200)
+        #top_indices = self.top_k_extract(stage1_mean, pred_k)
+        #S_trimmed = self.trim_data(S, top_indices)
+        S_trimmed = S[:,0:k]
+
+
+        S_trimmed = matlab.double(S_trimmed.tolist())
+        tmp = [self.params.eps]
+        tmp = matlab.double(tmp)
+        estimated_mean = eng.robust_mean_pgd(S_trimmed, tmp[0][0], 100)
+
+        estimated_mean_total = np.zeros(d)
+        for i in range(k):
+            estimated_mean_total[i] = estimated_mean[i][0]
+        total_time = time.time() - start_time
+
+        return estimated_mean_total, total_time
+
 
 class Topk_GD(object):
 
@@ -1190,6 +1280,15 @@ class load_data(RunCollection):
                 self.params.m = xvar * 80
                 self.params.mu = np.ones(xvar) * 2
 
+            elif xvar_name == 'test':
+                self.params.k = xvar
+                self.params.mu = np.ones(xvar) * 2
+                if xvar_name == 5:
+                    self.params.m = 400
+                if xvar_name == 25:
+                    self.params.m = 10000
+
+
             #if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
             S, tm = self.model.generate(self.params)
@@ -1340,7 +1439,9 @@ class plot_data(RunCollection):
                    'RME_sp_L_npre': 'v', 
                    'RME_npre': '^', 
                    'GDAlgs_npre': '^',
-                   'GD_nonsparse': '*'
+                   'GD_nonsparse': '*',
+                   'Stage2_GD': 'o',
+                  'Stage2_filter': 'p'
                    }
 
         labels = {'NP_sp': 'NP_sp',
@@ -1358,7 +1459,9 @@ class plot_data(RunCollection):
                   'RME_sp_L_npre': 'Filter_sp_L_npre', 
                   'RME_npre': 'Filter_nsp_npre', 
                   'GDAlgs_npre': 'Sparse GD_npre',
-                  'GD_nonsparse': 'GD_nonsparse'
+                  'GD_nonsparse': 'GD_nonsparse',
+                  'Stage2_GD': 'Stage2_GD',
+                  'Stage2_filter': 'Stage2_filter'
                   }
 
         s = len(runs)
@@ -1381,7 +1484,7 @@ class plot_data(RunCollection):
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-            plt.fill_between(xs, mins, maxs, alpha=0.2)
+            plt.fill_between(xs, mins, maxs,alpha=0.2)
             plt.plot(xs, np.median(A, axis=0),
                      label=labels[key], marker=markers[key])
 
@@ -1400,7 +1503,7 @@ class plot_data(RunCollection):
         plt.yticks(color='k', fontsize=12)
         plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
-        plt.xlim(5,50)
+        #plt.xlim(5,50)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()

@@ -55,6 +55,8 @@ class Params(object):
         
     def tm(self):
         tm = np.append(self.mu, np.zeros(self.d-self.k))
+        if len(tm) > self.d: return tm[:self.d]
+        if len(tm) < self.d: return np.append(tm, np.zeros(self.d-len(tm)))
         return tm                       #Sparse Mean
         
 
@@ -197,7 +199,9 @@ class FiskModel(object):
 
     def generate(self, params):
         m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
-
+        print('tm and k')
+        print(tm)
+        print(params.k)
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
@@ -651,6 +655,60 @@ class Stage2_filter(FilterAlgs):
 
         #print(final_mean)
         return final_mean, time_stage_1 + time_stage_2
+
+
+class Top_K_Filtered_RME(FilterAlgs):
+
+    lfilter, qfilter = True, False
+    dense_filter = True
+    # do_plot_linear = True
+
+    def __init__(self, params):
+        self.params = params
+
+    def top_k_extract(self, arr, k):
+        """Output the top k indices of arr."""
+        return np.argpartition(np.abs(arr), -k)[-k:]
+
+    def trim_data(self, S, top_indices):
+        """Set the non-top-k coordinates to 0 for every data point."""
+        k = self.params.k
+        S_new = S[:, top_indices]
+        self.params.d = k
+        return S_new
+
+    def alg(self, S, indicator):
+        """Main algorithm."""
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
+        start_time = time.time()
+        k = self.params.k
+
+        stage1_mean, pred_k = Top_K.GD(self, S, 200)
+        S_trimmed = self.trim_data(S, pred_k)
+        time_stage_1 = time.time() - start_time
+        #self.params.d = pred_k
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+        #print('ATTENTION!')
+        #print(mean)
+        if type(mean) == int:
+            mean = np.zeros(len(stage1_mean))
+        #print(top_indices)
+        #print(stage1_mean)
+        final_mean = np.zeros(len(stage1_mean))
+        #print(final_mean)
+        #for i in range(len(top_indices)):
+
+            #final_mean[top_indices[i]] = mean[i]
+
+        j = 0
+        for i in pred_k:
+            final_mean[i] = mean[j]
+            j = j + 1
+
+        #print(final_mean)
+        return final_mean, time_stage_1 + time_stage_2
+
 
 class Top_K_Filtered(FilterAlgs):
 
@@ -1277,7 +1335,7 @@ class load_data(RunCollection):
 
             elif xvar_name == 'm_k':
                 self.params.k = xvar
-                self.params.m = xvar * 80
+                self.params.m = xvar * 100
                 self.params.mu = np.ones(xvar) * 2
 
             elif xvar_name == 'test':
@@ -1287,6 +1345,9 @@ class load_data(RunCollection):
                     self.params.m = 400
                 if xvar_name == 25:
                     self.params.m = 10000
+
+            elif xvar_name == 'sen':
+                self.params.k = xvar
 
 
             #if y_is_m == False:
@@ -1441,7 +1502,8 @@ class plot_data(RunCollection):
                    'GDAlgs_npre': '^',
                    'GD_nonsparse': '*',
                    'Stage2_GD': 'o',
-                  'Stage2_filter': 'p'
+                  'Stage2_filter': 'p',
+                  'Top_K_Filtered_RME': '*'
                    }
 
         labels = {'NP_sp': 'NP_sp',
@@ -1451,7 +1513,7 @@ class plot_data(RunCollection):
                   'Oracle': 'Oracle',
                   'RME': 'Filter_nsp',
                   'Top_K': 'Stage 1',
-                  'Top_K_Filtered': 'Top_K + Filter_sp_LQ',
+                  'Top_K_Filtered': 'Full',
                   'GDAlgs': 'Sparse GD',
                   'Topk_GD': 'Full',
                   'NP_sp_npre': 'NP_sp_npre',
@@ -1461,7 +1523,8 @@ class plot_data(RunCollection):
                   'GDAlgs_npre': 'Sparse GD_npre',
                   'GD_nonsparse': 'GD_nonsparse',
                   'Stage2_GD': 'Stage2_GD',
-                  'Stage2_filter': 'Stage2_filter'
+                  'Stage2_filter': 'Stage2_filter',
+                  'Top_K_Filtered_RME': 'Full'
                   }
 
         s = len(runs)
@@ -1503,7 +1566,7 @@ class plot_data(RunCollection):
         plt.yticks(color='k', fontsize=12)
         plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
-        plt.xlim(5,100)
+        plt.xlim(1,100)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()

@@ -18,6 +18,7 @@ from scipy.sparse import spdiags
 from scipy.sparse.linalg import norm as sparse_norm
 from scipy.linalg import eigh
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from pylab import rcParams
 import pickle
 from matplotlib import rc
@@ -1420,7 +1421,7 @@ class plot_data(RunCollection):
     def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'g', 'Top_K': 'b', 'Top_K_Filtered': 'tomato', 'GDAlgs':'sandybrown', 'Topk_GD':'palevioletred',
+                'NP_sp': 'k', 'Oracle': 'tab:green', 'Top_K': 'tab:blue', 'Top_K_Filtered': 'tab:orange', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
                 'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 

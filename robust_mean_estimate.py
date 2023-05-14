@@ -1277,7 +1277,7 @@ class load_data(RunCollection):
 
             elif xvar_name == 'm_k':
                 self.params.k = xvar
-                self.params.m = xvar * 80
+                self.params.m = xvar * 100
                 self.params.mu = np.ones(xvar) * 2
 
             elif xvar_name == 'test':
@@ -1420,7 +1420,7 @@ class plot_data(RunCollection):
     def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'b', 'Top_K': 'g', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
+                'NP_sp': 'k', 'Oracle': 'g', 'Top_K': 'b', 'Top_K_Filtered': 'tomato', 'GDAlgs':'sandybrown', 'Topk_GD':'palevioletred',
                 'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 
@@ -1451,9 +1451,9 @@ class plot_data(RunCollection):
                   'Oracle': 'Oracle',
                   'RME': 'Filter_nsp',
                   'Top_K': 'Stage 1',
-                  'Top_K_Filtered': 'Top_K + Filter_sp_LQ',
+                  'Top_K_Filtered': 'Full',
                   'GDAlgs': 'Sparse GD',
-                  'Topk_GD': 'Full',
+                  'Topk_GD': 'Topk_GD',
                   'NP_sp_npre': 'NP_sp_npre',
                   'RME_sp_npre': 'Filter_sp_LQ_npre', 
                   'RME_sp_L_npre': 'Filter_sp_L_npre', 
@@ -1484,9 +1484,9 @@ class plot_data(RunCollection):
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-            plt.fill_between(xs, mins, maxs,alpha=0.2)
+            plt.fill_between(xs, mins, maxs,alpha=0.2, color=cols[key])
             plt.plot(xs, np.median(A, axis=0),
-                     label=labels[key], marker=markers[key])
+                     label=labels[key], marker=markers[key], color=cols[key])
 
         #p = copy.copy(self.params)
 
@@ -1521,9 +1521,9 @@ class plot_data(RunCollection):
 
     def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
 
-        cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
-                'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m',
-                'NP_sp_npre_time': 'gray', 'RME_sp_npre_time': 'skyblue', 'RME_sp_L_npre_time': 'springgreen', 'RME_npre_time': 'tomato', 'GDAlgs_npre_time': 'peachpuff', 'GD_nonsparse_time': 'plum'
+        cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
+                'NP_sp': 'k', 'Oracle': 'g', 'Top_K': 'b', 'Top_K_Filtered': 'tomato', 'GDAlgs':'sandybrown', 'Topk_GD':'palevioletred',
+                'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
                 }
 
         markers = {'RME_sp_time': 'o',
@@ -1544,22 +1544,24 @@ class plot_data(RunCollection):
                    'GD_nonsparse_time': '*'
                    }
 
-        labels = {'NP_sp_time': 'NP_sp',
-                  'ransacGaussianMean_time': 'RANSAC',
-                  'RME_sp_time': 'Filter_sp_LQ',
-                  'RME_sp_L_time': 'Filter_sp_L',
-                  'Oracle_time': 'Oracle',
-                  'RME_time': 'Filter_nsp',
-                  'Top_K_time': 'Top_K',
-                  'Top_K_Filtered_time': 'Top_K + Filter_sp_LQ',
-                  'GDAlgs_time': 'Sparse GD',
-                  'Topk_GD_time': 'Top_K + Sparse GD',
-                  'NP_sp_npre_time': 'NP_sp_npre',
-                  'RME_sp_npre_time': 'Filter_sp_LQ_npre', 
-                  'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
-                  'RME_npre_time': 'Filter_nsp_npre', 
-                  'GDAlgs_npre_time': 'Sparse GD_npre',
-                  'GD_nonsparse_time': 'GD_nonsparse'
+        labels = {'NP_sp': 'NP_sp',
+                  'ransacGaussianMean': 'RANSAC',
+                  'RME_sp': 'Filter_sp_LQ',
+                  'RME_sp_L': 'Filter_sp_L',
+                  'Oracle': 'Oracle',
+                  'RME': 'Filter_nsp',
+                  'Top_K': 'Stage 1',
+                  'Top_K_Filtered': 'Full',
+                  'GDAlgs': 'Sparse GD',
+                  'Topk_GD': 'Topk_GD',
+                  'NP_sp_npre': 'NP_sp_npre',
+                  'RME_sp_npre': 'Filter_sp_LQ_npre', 
+                  'RME_sp_L_npre': 'Filter_sp_L_npre', 
+                  'RME_npre': 'Filter_nsp_npre', 
+                  'GDAlgs_npre': 'Sparse GD_npre',
+                  'GD_nonsparse': 'GD_nonsparse',
+                  'Stage2_GD': 'Stage2_GD',
+                  'Stage2_filter': 'Stage2_filter'
                   }
 
         s = len(runs)

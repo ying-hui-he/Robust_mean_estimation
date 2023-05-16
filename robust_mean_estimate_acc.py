@@ -523,7 +523,7 @@ class plot_data(RunCollection):
                 axs[i].fill_between(xs, mins, maxs,alpha=0.2, color=cols[key])
                 axs[i].plot(xs, np.median(A, axis=0),
                         label=labels[key], marker=markers[key], color=cols[key])
-                axs[i].set_xlabel('$k$')
+                axs[i].set_xlabel('$\epsilon$')
                 axs[i].set_title(titles[i], fontsize=12)
                 axs[i].set_xlim(0.05, 0.45)
                 #axs[i].legend(loc='lower left', fontsize=10)

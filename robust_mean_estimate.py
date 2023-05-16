@@ -1568,7 +1568,7 @@ class plot_data(RunCollection):
         plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
         plt.xscale(yscale)
-        plt.xlim(5,100)
+        plt.xlim(5,200)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()

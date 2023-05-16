@@ -1520,7 +1520,7 @@ class plot_data(RunCollection):
                                  fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.figure()
     
-    def plot_3_xloss(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_xloss(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs1=[], xs2=[], xs3=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim = None):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
                 'NP_sp': 'k', 'Oracle': 'tab:green', 'Top_K': 'tab:blue', 'Top_K_Filtered': 'tab:orange', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
@@ -1569,7 +1569,10 @@ class plot_data(RunCollection):
 
         fig, axs = plt.subplots(1, 3, figsize=(12, 2.5))
         runs = [runs1, runs2, runs3]
-        titles = ['Lognormal', 'Pareto', 'Student $t$']
+        xs_list = [xs1, xs2, xs3]
+        # titles = ['Lognormal', 'Pareto', 'Student $t$']
+        titles = ['Fisk', 'Pareto', 'Student $t$']
+        xlabels = ['$c$', '$b$', '$\\nu$']
 
         for i in range(3):
             s = len(runs[i])
@@ -1592,13 +1595,13 @@ class plot_data(RunCollection):
                 mins = [np.sort(x)[int(s*0.25)] for x in A.T]
                 maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-                axs[i].fill_between(xs, mins, maxs,alpha=0.2, color=cols[key])
-                axs[i].plot(xs, np.median(A, axis=0),
+                axs[i].fill_between(xs_list[i], mins, maxs,alpha=0.2, color=cols[key])
+                axs[i].plot(xs_list[i], np.median(A, axis=0),
                         label=labels[key], marker=markers[key], color=cols[key])
-                axs[i].set_xlabel('$k$')
+                axs[i].set_xlabel(xlabels[i])
                 axs[i].set_title(titles[i], fontsize=12)
-                axs[i].set_xlim(5, 100)
-                axs[i].legend(loc='upper left', fontsize=10)
+                axs[i].set_xlim(*xlim)
+                axs[i].legend(loc='upper right', fontsize=10)
 
         #p = copy.copy(self.params)
 
@@ -1621,17 +1624,17 @@ class plot_data(RunCollection):
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_3_xloss_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_xloss_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs1=[], xs2=[], xs3=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim = None):
         Run1 = self.readdata(filename1)
         Run2 = self.readdata(filename2)
         Run3 = self.readdata(filename3)
         self.plot_3_xloss(outputfilename, Run1, Run2, Run3, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname, yscale)
+                        xs1, xs2, xs3, fsize, fpad, figsize, fontname, yscale, xlim)
 
-    def plotxy_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
+    def plotxy_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs1=[], xs2=[], xs3=[], fontname='Arial', yscale='linear', xlim = None):
 
-        self.plot_3_xloss_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=xs, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+        self.plot_3_xloss_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs1=xs1, xs2=xs2, xs3=xs3, figsize=figsize,
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale, xlim=xlim)
         plt.figure()
 
     def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):

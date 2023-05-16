@@ -525,8 +525,8 @@ class plot_data(RunCollection):
                         label=labels[key], marker=markers[key], color=cols[key])
                 axs[i].set_xlabel('$k$')
                 axs[i].set_title(titles[i], fontsize=12)
-                axs[i].set_xlim(5, 100)
-                axs[i].legend(loc='lower left', fontsize=10)
+                axs[i].set_xlim(0.05, 0.45)
+                #axs[i].legend(loc='lower left', fontsize=10)
 
         #p = copy.copy(self.params)
 

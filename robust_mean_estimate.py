@@ -3,6 +3,7 @@ import matlab.engine
 import numpy as np
 import scipy
 import copy
+from tqdm import tqdm
 import powerlaw
 from scipy.stats import powerlaw
 from scipy.stats import pareto
@@ -81,7 +82,7 @@ class RunCollection(object):
         self.inp = inp
 
     def run(self, trials):
-        for i in range(trials):
+        for i in tqdm(range(trials)):
             self.runs.append(self.func(*self.inp))
 
 
@@ -1655,12 +1656,12 @@ class plot_data(RunCollection):
                 mins = [np.sort(x)[int(s*0.25)] for x in A.T]
                 maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-                axs[i].fill_between(xs, mins, maxs,alpha=0.2, color=cols[key])
+                axs[i].fill_between(xs, mins, maxs,alpha=0.2)
                 axs[i].plot(xs, np.median(A, axis=0),
-                        label=labels[key], marker=markers[key], color=cols[key])
+                        label=labels[key], marker=markers[key])
                 axs[i].set_xlabel('$k$')
                 axs[i].set_title(titles[i], fontsize=12)
-                axs[i].set_xlim(0.05, 0.45)
+                axs[i].set_xlim(5, 100)
                 axs[i].legend(loc='upper left', fontsize=10)
 
         #p = copy.copy(self.params)

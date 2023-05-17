@@ -19,7 +19,7 @@ from scipy.sparse import spdiags
 from scipy.sparse.linalg import norm as sparse_norm
 from scipy.linalg import eigh
 import matplotlib.pyplot as plt
-from matplotlib.ticker import PercentFormatter
+from matplotlib.ticker import FuncFormatter
 from pylab import rcParams
 import pickle
 from matplotlib import rc
@@ -525,7 +525,10 @@ class plot_data(RunCollection):
                         label=labels[key], marker=markers[key], color=cols[key])
                 axs[i].set_xlabel('$\epsilon$')
                 axs[i].set_title(titles[i], fontsize=12)
+                #axs[i].yaxis.set_major_formatter(FuncFormatter(percent_formatter))
+                axs[i].set_ylim(-0.1, 1.1)
                 axs[i].set_xlim(0.05, 0.45)
+                
                 #axs[i].legend(loc='lower left', fontsize=10)
 
         #p = copy.copy(self.params)
@@ -560,6 +563,7 @@ class plot_data(RunCollection):
 
         self.plot_3_xloss_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=xs, figsize=figsize,
                                  fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+        #plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
         plt.figure()
 
 
@@ -586,3 +590,6 @@ def trim_idx_abs(v, idx):
         z[i] = v[i]
 
     return z
+
+def percent_formatter(x, _):
+    return '{:.0%}'.format(x)

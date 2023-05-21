@@ -1694,7 +1694,9 @@ class plot_data(RunCollection):
                    'RME_sp_L_npre_time': 'v', 
                    'RME_npre_time': '^', 
                    'GDAlgs_npre_time': '^',
-                   'GD_nonsparse_time': '*'
+                   'GD_nonsparse_time': '*',
+                   'Full_time': '^',
+                  'Full_Filter_time': '^'
                    }
 
         labels = {'NP_sp_time': 'NP_sp',
@@ -1712,7 +1714,9 @@ class plot_data(RunCollection):
                   'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
                   'RME_npre_time': 'Filter_nsp_npre', 
                   'GDAlgs_npre_time': 'Sparse GD_npre',
-                  'GD_nonsparse_time': 'GD_nonsparse'
+                  'GD_nonsparse_time': 'GD_nonsparse',
+                  'Full_time': 'Full_GD',
+                  'Full_Filter_time': 'Full_Filter'
                   }
 
         s = len(runs)
@@ -1735,9 +1739,9 @@ class plot_data(RunCollection):
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-            plt.fill_between(xs, mins, maxs, color=cols[key], alpha=0.2)
+            plt.fill_between(xs, mins, maxs, alpha=0.2)
             plt.plot(xs, np.median(A, axis=0),
-                     label=labels[key], color=cols[key], marker=markers[key])
+                     label=labels[key], marker=markers[key])
 
         #p = copy.copy(self.params)
 

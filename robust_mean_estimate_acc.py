@@ -11,6 +11,7 @@ from scipy.stats import cauchy
 from scipy.stats import levy
 from scipy.stats import t
 from scipy.stats import fisk
+from scipy.stats import lognorm
 from scipy import special
 from numpy import linalg as LA
 from scipy.sparse import coo_matrix
@@ -20,6 +21,7 @@ from scipy.sparse.linalg import norm as sparse_norm
 from scipy.linalg import eigh
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import PercentFormatter
 from pylab import rcParams
 import pickle
 from matplotlib import rc
@@ -101,7 +103,23 @@ class ParetoModel(object):
         S = S + tm
 
         return S, tm
-    
+
+
+class nonsym_ParetoModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
+
+        pareto_mean = pareto.stats(param, moments='m')
+
+        S = pareto.rvs(param, size = (m,d)) - pareto_mean
+
+        S = var * S + tm
+
+        return S, tm
+
 
 class TModel(object):
     def __init__(self):
@@ -134,6 +152,22 @@ class FiskModel(object):
         return S, tm
 
 
+class nonsym_FiskModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
+
+        fisk_mean = fisk.stats(param, moments='m')
+
+        S = fisk.rvs(param, size = (m,d)) - fisk_mean
+
+        S = var * S + tm
+
+        return S, tm
+
+
 class LognormalModel(object):
     def __init__(self):
         pass
@@ -148,6 +182,22 @@ class LognormalModel(object):
                 S[i][j] = var * np.random.lognormal() * (2 * np.random.randint(0,2) - 1)
         #print(tm)
         S = S + tm
+
+        return S, tm
+    
+
+class nonsym_LognormalModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, tm, var = params.m, params.d, params.tm(), params.var
+
+        lognorm_mean = lognorm.stats(0.954, moments='m')
+
+        S = lognorm.rvs(0.954, size = (m,d)) - lognorm_mean
+
+        S = var * S + tm
 
         return S, tm
     

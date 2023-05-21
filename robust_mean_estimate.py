@@ -11,6 +11,7 @@ from scipy.stats import cauchy
 from scipy.stats import levy
 from scipy.stats import t
 from scipy.stats import fisk
+from scipy.stats import lognorm
 from scipy import special
 from numpy import linalg as LA
 from scipy.sparse import coo_matrix
@@ -64,15 +65,7 @@ class Params(object):
 def err_rspca(a, b): return LA.norm(np.outer(a, a)-np.outer(b, b))
 
 
-def err(a, b):
-    # print("estimated: ", a)
-    #if a.shape != b.shape:
-        #k = a.shape[0]
-        #b = trim_k_abs(b, k)
-        # print(k)
-        # print(trim_k_abs(b, k))
-    # print("tm: ", b)
-    return LA.norm(a-b)
+def err(a, b): return LA.norm(a-b)
 
 
 class RunCollection(object):
@@ -101,51 +94,6 @@ class GaussianModel(object):
         m, d, tm, var = params.m, params.d, params.tm(), params.var
 
         S = var * np.random.randn(m, d) + tm
-        #print(S)
-        print(tm)
-
-        return S, tm
-
-
-'''
-class PowerlawModel(object):
-    def __init__(self):
-        pass
-
-    def generate(self, params):
-        m, d, k, mu = params.m, params.d, params.k, params.mu
-
-        tm = np.append(mu, np.zeros(d-k))   #Sparse Mean
-        np.random.shuffle(tm)
-
-        S = np.empty((m, d))
-        alpha = 2.5
-        xmin = 1
-        mean = np.zeros((m, d))
-        mean += (alpha / (alpha - 1)) * xmin
-        dist = powerlaw.Power_Law(xmin = xmin, parameters = [alpha])
-        for i in range(m):
-            S[i, :] = dist.generate_random(d)
-        S = S - mean + tm
-
-        return S, tm
-'''
-
-
-class PowerlawModel(object):
-    def __init__(self):
-        pass
-
-    def generate(self, params):
-        m, d, var, tm = params.m, params.d, params.var, params.tm()
-
-        a = 0.659
-        S = np.zeros((m, d))
-        for i in range(m):
-            for j in range(d):
-                S[i][j] = var * powerlaw.rvs(a) * (2 * np.random.randint(0,2) - 1)
-        
-        S = S + tm
 
         return S, tm
         
@@ -157,7 +105,6 @@ class ParetoModel(object):
     def generate(self, params):
         m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
 
-        #a = 2.62
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
@@ -166,19 +113,22 @@ class ParetoModel(object):
         S = S + tm
 
         return S, tm
+    
 
-'''
-class CauchyModel(object):
+class nonsym_ParetoModel(object):
     def __init__(self):
         pass
 
     def generate(self, params):
-        m, d, tm, var = params.m, params.d, params.tm(), params.var
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
 
-        S = var * cauchy.rvs(size = (m, d)) + tm
+        pareto_mean = pareto.stats(param, moments='m')
+
+        S = pareto.rvs(param, size = (m,d)) - pareto_mean
+
+        S = var * S + tm
 
         return S, tm
-'''
     
 
 class TModel(object):
@@ -188,7 +138,6 @@ class TModel(object):
     def generate(self, params):
         m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
 
-        #df = 2.74
         S = var * t.rvs(param, size = (m,d)) + tm
 
         return S, tm
@@ -200,15 +149,29 @@ class FiskModel(object):
 
     def generate(self, params):
         m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
-        print('tm and k')
-        print(tm)
-        print(params.k)
+
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
                 S[i][j] = var * fisk.rvs(param) * (2 * np.random.randint(0,2) - 1)
         
         S = S + tm
+
+        return S, tm
+    
+
+class nonsym_FiskModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
+
+        fisk_mean = fisk.stats(param, moments='m')
+
+        S = fisk.rvs(param, size = (m,d)) - fisk_mean
+
+        S = var * S + tm
 
         return S, tm
 
@@ -220,14 +183,28 @@ class LognormalModel(object):
     def generate(self, params):
         m, d, tm, var = params.m, params.d, params.tm(), params.var
 
-        #S = np.random.lognormal(np.ones(d), var, (m, d))
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
-                S[i][j] = var * np.random.lognormal() * (2 * np.random.randint(0,2) - 1)
-        #print(S)
-        print(tm)
+                S[i][j] = var * lognorm.rvs(0.954) * (2 * np.random.randint(0,2) - 1)
+
         S = S + tm
+
+        return S, tm
+
+
+class nonsym_LognormalModel(object):
+    def __init__(self):
+        pass
+
+    def generate(self, params):
+        m, d, tm, var = params.m, params.d, params.tm(), params.var
+
+        lognorm_mean = lognorm.stats(0.954, moments='m')
+
+        S = lognorm.rvs(0.954, size = (m,d)) - lognorm_mean
+
+        S = var * S + tm
 
         return S, tm
 
@@ -250,8 +227,6 @@ class DenseNoise(object):
 
         indicator = np.ones(len(G))
         indicator[L:] = 0
-
-        print(G)
         
         return G, indicator
     
@@ -296,16 +271,8 @@ def pre_processing(params, S, indicator):
         X_grouped.append(list(np.mean(S_tmp, axis = 0)))
         for h in idx_tmp:
             indicator_preprocessing[i] *= indicator[h]
-    '''
-    X_split = np.array_split(S, K)
-    X_grouped = []
-    for i in X_split:
-        X_grouped.append(list(np.mean(i, axis = 0)))
-    '''
-    #X_grouped = np.mean(X_grouped, axis=1)
-    #print(X_grouped)
+
     X_grouped = np.array(X_grouped)
-    print('m = {m} change to K = {K}'.format(m = m, K = K))
     params.m = K
     params.eps = ceil(eps * m) / K
     return params, X_grouped, indicator_preprocessing
@@ -608,56 +575,6 @@ class RME(FilterAlgs):
         return super().alg(S = S, indicator = indicator)
 
 
-class Stage2_filter(FilterAlgs):
-
-    lfilter, qfilter = True, True
-
-    def __init__(self, params):
-        self.params = params
-
-    def top_k_extract(self, arr, k):
-        """Output the top k indices of arr."""
-        return np.argpartition(np.abs(arr), -k)[-k:]
-
-    def trim_data(self, S, top_indices):
-        """Set the non-top-k coordinates to 0 for every data point."""
-        k = self.params.k
-        S_new = S[:, top_indices]
-        self.params.d = k
-        return S_new
-
-    def alg(self, S, indicator):
-        """Main algorithm."""
-        params, S, indicator = pre_processing(self.params, S, indicator)
-        self.params = params
-        start_time = time.time()
-        k = self.params.k
-        d = self.params.d
-        #stage1_mean, pred_k = Top_K.GD(self, S, 200)
-        S_trimmed = S[:,0:k]
-        self.params.d = k
-        time_stage_1 = time.time() - start_time
-        #self.params.d = pred_k
-        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
-        #print('ATTENTION!')
-        #print(mean)
-        if type(mean) == int:
-            mean = np.zeros(d)
-        #print(top_indices)
-        #print(stage1_mean)
-        final_mean = np.zeros(d)
-        #print(final_mean)
-        #for i in range(len(top_indices)):
-
-            #final_mean[top_indices[i]] = mean[i]
-
-        for i in range(k):
-            final_mean[i] = mean[i]
-
-        #print(final_mean)
-        return final_mean, time_stage_1 + time_stage_2
-
-
 class Top_K_Filtered_RME(FilterAlgs):
 
     lfilter, qfilter = True, False
@@ -668,46 +585,40 @@ class Top_K_Filtered_RME(FilterAlgs):
         self.params = params
 
     def top_k_extract(self, arr, k):
-        """Output the top k indices of arr."""
+
         return np.argpartition(np.abs(arr), -k)[-k:]
 
     def trim_data(self, S, top_indices):
-        """Set the non-top-k coordinates to 0 for every data point."""
+
         k = self.params.k
         S_new = S[:, top_indices]
         self.params.d = k
         return S_new
 
     def alg(self, S, indicator):
-        """Main algorithm."""
+
         params, S, indicator = pre_processing(self.params, S, indicator)
         self.params = params
         start_time = time.time()
-        k = self.params.k
 
         stage1_mean, pred_k = Top_K.GD(self, S, 200)
         S_trimmed = self.trim_data(S, pred_k)
         time_stage_1 = time.time() - start_time
-        #self.params.d = pred_k
-        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
-        #print('ATTENTION!')
-        #print(mean)
-        if type(mean) == int:
-            mean = np.zeros(len(stage1_mean))
-        #print(top_indices)
-        #print(stage1_mean)
-        final_mean = np.zeros(len(stage1_mean))
-        #print(final_mean)
-        #for i in range(len(top_indices)):
 
-            #final_mean[top_indices[i]] = mean[i]
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+
+        if type(mean) == int:
+            tmp = mean
+            mean = np.zeros(len(stage1_mean))
+            mean[pred_k[0]] = tmp
+
+        final_mean = np.zeros(len(stage1_mean))
 
         j = 0
         for i in pred_k:
             final_mean[i] = mean[j]
             j = j + 1
 
-        #print(final_mean)
         return final_mean, time_stage_1 + time_stage_2
 
 
@@ -719,46 +630,40 @@ class Top_K_Filtered(FilterAlgs):
         self.params = params
 
     def top_k_extract(self, arr, k):
-        """Output the top k indices of arr."""
+
         return np.argpartition(np.abs(arr), -k)[-k:]
 
     def trim_data(self, S, top_indices):
-        """Set the non-top-k coordinates to 0 for every data point."""
+
         k = self.params.k
         S_new = S[:, top_indices]
         self.params.d = k
         return S_new
 
     def alg(self, S, indicator):
-        """Main algorithm."""
+
         params, S, indicator = pre_processing(self.params, S, indicator)
         self.params = params
         start_time = time.time()
-        k = self.params.k
 
         stage1_mean, pred_k = Top_K.GD(self, S, 200)
         S_trimmed = self.trim_data(S, pred_k)
         time_stage_1 = time.time() - start_time
-        #self.params.d = pred_k
-        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
-        #print('ATTENTION!')
-        #print(mean)
-        if type(mean) == int:
-            mean = np.zeros(len(stage1_mean))
-        #print(top_indices)
-        #print(stage1_mean)
-        final_mean = np.zeros(len(stage1_mean))
-        #print(final_mean)
-        #for i in range(len(top_indices)):
 
-            #final_mean[top_indices[i]] = mean[i]
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+
+        if type(mean) == int:
+            tmp = mean
+            mean = np.zeros(len(stage1_mean))
+            mean[pred_k[0]] = tmp
+
+        final_mean = np.zeros(len(stage1_mean))
 
         j = 0
         for i in pred_k:
             final_mean[i] = mean[j]
             j = j + 1
 
-        #print(final_mean)
         return final_mean, time_stage_1 + time_stage_2
 
 
@@ -770,18 +675,18 @@ class Full_Filter(FilterAlgs):
         self.params = params
 
     def top_k_extract(self, arr, k):
-        """Output the top k indices of arr."""
+
         return np.argpartition(np.abs(arr), -k)[-k:]
 
     def trim_data(self, S, top_indices):
-        """Set the non-top-k coordinates to 0 for every data point."""
+
         k = self.params.k
         S_new = S[:, top_indices]
         self.params.d = k
         return S_new
 
     def alg(self, S, indicator):
-        """Main algorithm."""
+
         eps_tmp = self.params.eps
         m_tmp = self.params.m
         indicator_tmp = indicator
@@ -789,33 +694,27 @@ class Full_Filter(FilterAlgs):
         self.params = params
         indicator = indicator_tmp
         start_time = time.time()
-        k = self.params.k
 
         stage1_mean, pred_k = Top_K.GD(self, S_tmp, 200)
         self.params.m = m_tmp
         self.params.eps = eps_tmp
         S_trimmed = self.trim_data(S, pred_k)
         time_stage_1 = time.time() - start_time
-        #self.params.d = pred_k
-        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
-        #print('ATTENTION!')
-        #print(mean)
-        if type(mean) == int:
-            mean = np.zeros(len(stage1_mean))
-        #print(top_indices)
-        #print(stage1_mean)
-        final_mean = np.zeros(len(stage1_mean))
-        #print(final_mean)
-        #for i in range(len(top_indices)):
 
-            #final_mean[top_indices[i]] = mean[i]
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+
+        if type(mean) == int:
+            tmp = mean
+            mean = np.zeros(len(stage1_mean))
+            mean[pred_k[0]] = tmp
+
+        final_mean = np.zeros(len(stage1_mean))
 
         j = 0
         for i in pred_k:
             final_mean[i] = mean[j]
             j = j + 1
 
-        #print(final_mean)
         return final_mean, time_stage_1 + time_stage_2
 
 
@@ -825,6 +724,7 @@ class GD_nonsparse(object):
         self.params = params
 
     def alg(self, S, indicator):
+
         start_time = time.time()
         S_tmp = matlab.double(S.tolist())
         tmp = [self.params.eps]
@@ -839,48 +739,6 @@ class GD_nonsparse(object):
         total_time = time.time() - start_time
 
         return estimated_mean_total, total_time
-
-
-class Stage2_GD(object):
-
-    def __init__(self, params):
-        self.params = params
-    
-    def top_k_extract(self, arr, k):
-        """Output the top k indices of arr."""
-        return np.argpartition(np.abs(arr), -k)[-k:]
-
-    def trim_data(self, S, top_indices):
-        """Set the non-top-k coordinates to 0 for every data point."""
-        k = self.params.k
-        S_new = S[:, top_indices]
-        self.params.d = k
-        return S_new
-
-    def alg(self, S, indicator):
-        params, S, indicator = pre_processing(self.params, S, indicator)
-        self.params = params
-        start_time = time.time()
-        k = self.params.k
-        d = self.params.d
-
-        #stage1_mean, pred_k = Top_K.GD(self, S, 200)
-        #top_indices = self.top_k_extract(stage1_mean, pred_k)
-        #S_trimmed = self.trim_data(S, top_indices)
-        S_trimmed = S[:,0:k]
-
-
-        S_trimmed = matlab.double(S_trimmed.tolist())
-        tmp = [self.params.eps]
-        tmp = matlab.double(tmp)
-        estimated_mean = eng.robust_mean_pgd(S_trimmed, tmp[0][0], 100)
-
-        estimated_mean_total = np.zeros(d)
-        for i in range(k):
-            estimated_mean_total[i] = estimated_mean[i][0]
-        total_time = time.time() - start_time
-
-        return estimated_mean_total, total_time
     
 
 class Full(object):
@@ -889,17 +747,18 @@ class Full(object):
         self.params = params
     
     def top_k_extract(self, arr, k):
-        """Output the top k indices of arr."""
+
         return np.argpartition(np.abs(arr), -k)[-k:]
 
     def trim_data(self, S, top_indices):
-        """Set the non-top-k coordinates to 0 for every data point."""
+
         k = len(top_indices)
         S_new = S[:, top_indices]
         self.params.d = k
         return S_new
 
     def alg(self, S, indicator):
+
         m_tmp = self.params.m
         eps_tmp = self.params.eps
         params, S_tmp, indicator = pre_processing(self.params, S, indicator)
@@ -907,8 +766,7 @@ class Full(object):
         start_time = time.time()
 
         stage1_mean, pred_k = Top_K.GD(self, S_tmp, 200)
-        #top_indices = self.top_k_extract(stage1_mean, pred_k)
-        #S_trimmed = self.trim_data(S, top_indices)
+
         S_trimmed = self.trim_data(S, pred_k)
 
         self.params.m = m_tmp
@@ -1621,25 +1479,25 @@ class plot_data(RunCollection):
 
         labels = {'NP_sp': 'NP_sp',
                   'ransacGaussianMean': 'RANSAC',
-                  'RME_sp': 'Filter_sp_LQ',
+                  'RME_sp': 'Sparse Filter',
                   'RME_sp_L': 'Filter_sp_L',
                   'Oracle': 'Oracle',
-                  'RME': 'Filter_nsp',
+                  'RME': 'Non-sparse Filter',
                   'Top_K': 'Stage 1',
-                  'Top_K_Filtered': 'Full',
+                  'Top_K_Filtered': 'Top_K_Filtered',
                   'GDAlgs': 'Sparse GD',
-                  'Topk_GD': 'Full',
+                  'Topk_GD': 'Topk_GD',
                   'NP_sp_npre': 'NP_sp_npre',
                   'RME_sp_npre': 'Filter_sp_LQ_npre', 
                   'RME_sp_L_npre': 'Filter_sp_L_npre', 
                   'RME_npre': 'Filter_nsp_npre', 
-                  'GDAlgs_npre': 'Sparse GD_npre',
+                  'GDAlgs_npre': 'Sparse GD',
                   'GD_nonsparse': 'GD_nonsparse',
                   'Stage2_GD': 'Stage2_GD',
                   'Stage2_filter': 'Stage2_filter',
-                  'Top_K_Filtered_RME': 'Full',
-                  'Full': 'Full',
-                  'Full_Filter': 'Full'
+                  'Top_K_Filtered_RME': 'Top_K_Filtered_RME',
+                  'Full': 'Full_GD',
+                  'Full_Filter': 'Full_Filter'
                   }
 
         s = len(runs)

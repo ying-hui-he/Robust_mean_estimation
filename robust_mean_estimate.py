@@ -56,6 +56,8 @@ class Params(object):
         
     def tm(self):
         tm = np.append(self.mu, np.zeros(self.d-self.k))
+        if len(tm) > self.d: return tm[:self.d]
+        if len(tm) < self.d: return np.append(tm, np.zeros(self.d-len(tm)))
         return tm                       #Sparse Mean
         
 
@@ -198,7 +200,9 @@ class FiskModel(object):
 
     def generate(self, params):
         m, d, var, tm, param = params.m, params.d, params.var, params.tm(), params.param
-
+        print('tm and k')
+        print(tm)
+        print(params.k)
         S = np.zeros((m, d))
         for i in range(m):
             for j in range(d):
@@ -652,6 +656,60 @@ class Stage2_filter(FilterAlgs):
 
         #print(final_mean)
         return final_mean, time_stage_1 + time_stage_2
+
+
+class Top_K_Filtered_RME(FilterAlgs):
+
+    lfilter, qfilter = True, False
+    dense_filter = True
+    # do_plot_linear = True
+
+    def __init__(self, params):
+        self.params = params
+
+    def top_k_extract(self, arr, k):
+        """Output the top k indices of arr."""
+        return np.argpartition(np.abs(arr), -k)[-k:]
+
+    def trim_data(self, S, top_indices):
+        """Set the non-top-k coordinates to 0 for every data point."""
+        k = self.params.k
+        S_new = S[:, top_indices]
+        self.params.d = k
+        return S_new
+
+    def alg(self, S, indicator):
+        """Main algorithm."""
+        params, S, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
+        start_time = time.time()
+        k = self.params.k
+
+        stage1_mean, pred_k = Top_K.GD(self, S, 200)
+        S_trimmed = self.trim_data(S, pred_k)
+        time_stage_1 = time.time() - start_time
+        #self.params.d = pred_k
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+        #print('ATTENTION!')
+        #print(mean)
+        if type(mean) == int:
+            mean = np.zeros(len(stage1_mean))
+        #print(top_indices)
+        #print(stage1_mean)
+        final_mean = np.zeros(len(stage1_mean))
+        #print(final_mean)
+        #for i in range(len(top_indices)):
+
+            #final_mean[top_indices[i]] = mean[i]
+
+        j = 0
+        for i in pred_k:
+            final_mean[i] = mean[j]
+            j = j + 1
+
+        #print(final_mean)
+        return final_mean, time_stage_1 + time_stage_2
+
 
 class Top_K_Filtered(FilterAlgs):
 
@@ -1289,6 +1347,9 @@ class load_data(RunCollection):
                 if xvar_name == 25:
                     self.params.m = 10000
 
+            elif xvar_name == 'sen':
+                self.params.k = xvar
+
 
             #if y_is_m == False:
                 #inp, S, indicator, tm = self.model.generate(self.params)
@@ -1442,7 +1503,8 @@ class plot_data(RunCollection):
                    'GDAlgs_npre': '^',
                    'GD_nonsparse': '*',
                    'Stage2_GD': 'o',
-                  'Stage2_filter': 'p'
+                  'Stage2_filter': 'p',
+                  'Top_K_Filtered_RME': '*'
                    }
 
         labels = {'NP_sp': 'NP_sp',
@@ -1462,7 +1524,8 @@ class plot_data(RunCollection):
                   'GDAlgs_npre': 'Sparse GD_npre',
                   'GD_nonsparse': 'GD_nonsparse',
                   'Stage2_GD': 'Stage2_GD',
-                  'Stage2_filter': 'Stage2_filter'
+                  'Stage2_filter': 'Stage2_filter',
+                  'Top_K_Filtered_RME': 'Full'
                   }
 
         s = len(runs)
@@ -1504,7 +1567,7 @@ class plot_data(RunCollection):
         plt.yticks(color='k', fontsize=12)
         plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
-        plt.xlim(5,100)
+        plt.xlim(1,100)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
@@ -1520,7 +1583,7 @@ class plot_data(RunCollection):
                                  fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
         plt.figure()
     
-    def plot_3_xloss(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_xloss(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs1=[], xs2=[], xs3=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim = None):
 
         cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
                 'NP_sp': 'k', 'Oracle': 'tab:green', 'Top_K': 'tab:blue', 'Top_K_Filtered': 'tab:orange', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
@@ -1569,7 +1632,10 @@ class plot_data(RunCollection):
 
         fig, axs = plt.subplots(1, 3, figsize=(12, 2.5))
         runs = [runs1, runs2, runs3]
-        titles = ['Lognormal', 'Pareto', 'Student $t$']
+        xs_list = [xs1, xs2, xs3]
+        # titles = ['Lognormal', 'Pareto', 'Student $t$']
+        titles = ['Fisk', 'Pareto', 'Student $t$']
+        xlabels = ['$c$', '$b$', '$\\nu$']
 
         for i in range(3):
             s = len(runs[i])
@@ -1592,13 +1658,13 @@ class plot_data(RunCollection):
                 mins = [np.sort(x)[int(s*0.25)] for x in A.T]
                 maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-                axs[i].fill_between(xs, mins, maxs,alpha=0.2, color=cols[key])
-                axs[i].plot(xs, np.median(A, axis=0),
+                axs[i].fill_between(xs_list[i], mins, maxs,alpha=0.2, color=cols[key])
+                axs[i].plot(xs_list[i], np.median(A, axis=0),
                         label=labels[key], marker=markers[key], color=cols[key])
-                axs[i].set_xlabel('$k$')
+                axs[i].set_xlabel(xlabels[i])
                 axs[i].set_title(titles[i], fontsize=12)
-                axs[i].set_xlim(5, 100)
-                axs[i].legend(loc='upper left', fontsize=10)
+                axs[i].set_xlim(*xlim)
+                axs[i].legend(loc='upper right', fontsize=10)
 
         #p = copy.copy(self.params)
 
@@ -1621,17 +1687,17 @@ class plot_data(RunCollection):
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_3_xloss_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_xloss_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs1=[], xs2=[], xs3=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim = None):
         Run1 = self.readdata(filename1)
         Run2 = self.readdata(filename2)
         Run3 = self.readdata(filename3)
         self.plot_3_xloss(outputfilename, Run1, Run2, Run3, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname, yscale)
+                        xs1, xs2, xs3, fsize, fpad, figsize, fontname, yscale, xlim)
 
-    def plotxy_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
+    def plotxy_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs1=[], xs2=[], xs3=[], fontname='Arial', yscale='linear', xlim = None):
 
-        self.plot_3_xloss_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=xs, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+        self.plot_3_xloss_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs1=xs1, xs2=xs2, xs3=xs3, figsize=figsize,
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale, xlim=xlim)
         plt.figure()
 
     def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
@@ -1790,15 +1856,15 @@ class plot_data(RunCollection):
         # im = ax.imshow(A, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
         im1 = axs[0].imshow(A1, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')
-        axs[0].set_title('Lognormal', fontsize=12)
+        axs[0].set_title('Lognormal ($\\alpha=2$)', fontsize=12)
 
         im2 = axs[1].imshow(A2, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')
-        axs[1].set_title('Pareto', fontsize=12)
+        axs[1].set_title('Pareto ($b=2$)', fontsize=12)
 
         im3 = axs[2].imshow(A3, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')
-        axs[2].set_title('Student $t$', fontsize=12)
+        axs[2].set_title('Student $t$ ($\\nu=2$)', fontsize=12)
 
         for i in range(3):
             axs[i].set_xticks(np.arange(len(xs)), labels=xs)
@@ -1814,7 +1880,7 @@ class plot_data(RunCollection):
         # cbar = ax.figure.colorbar(im, ax=ax)
         # cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
         cbar = fig.colorbar(im1, ax=axs, orientation='vertical', shrink=0.6)
-        cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+        cbar.ax.set_ylabel('$\ell_2$ error', rotation=-90, va="bottom")
         # plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         # plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         fig.text(0.08, 0.5, '$k$', va='center', rotation='vertical', fontsize=12)

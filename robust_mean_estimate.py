@@ -1826,7 +1826,7 @@ class plot_data(RunCollection):
         # im = ax.imshow(A, cmap=mpl.colormaps['YlGn'], interpolation='bicubic')
         im1 = axs[0].imshow(A1, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')
-        axs[0].set_title('Lognormal', fontsize=12)
+        axs[0].set_title('Fisk', fontsize=12)
 
         im2 = axs[1].imshow(A2, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')

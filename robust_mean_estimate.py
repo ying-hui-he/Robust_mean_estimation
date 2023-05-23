@@ -1490,7 +1490,7 @@ class plot_data(RunCollection):
             ans = pickle.load(g)
         return ans
 
-    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_xloss(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim=None):
 
         cols = {'RME_sp': 'k', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
                 'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'g', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
@@ -1585,27 +1585,30 @@ class plot_data(RunCollection):
         plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
         plt.xscale(yscale)
-        plt.xlim(xs[0],xs[-1])
+        if xlim:
+            plt.xlim(*xlim)
+        else:
+            plt.xlim(xs[0],xs[-1])
         #plt.ylim(0,3)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_xloss_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim=None):
         Run = self.readdata(filename)
         self.plot_xloss(outputfilename, Run, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname, yscale)
+                        xs, fsize, fpad, figsize, fontname, yscale, xlim=xlim)
 
-    def plotxy_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
+    def plotxy_fromfile(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear', xlim=None):
 
         self.plot_xloss_fromfile(outputfilename, filename, title, xlabel, ylabel, xs=xs, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale, xlim=xlim)
         plt.figure()
 
-    def plot_3_xloss(self, outputfilename, runs1, runs2, runs3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_xloss(self, outputfilename, runs1, runs2, runs3, title, xlabel=['$k$', '$k$', '$k$'], ylabel='$\ell_2$ error', xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim=None, ylim=None):
 
-        cols = {'RME_sp': 'b', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
-                'NP_sp': 'k', 'Oracle': 'tab:green', 'Top_K': 'tab:blue', 'Top_K_Filtered': 'tab:orange', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
-                'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum'
+        cols = {'RME_sp': 'k', 'RME_sp_L': 'g', 'RME': 'r', 'ransacGaussianMean': 'y',
+                'NP_sp': 'k', 'Oracle': 'c', 'Top_K': 'g', 'Top_K_Filtered': 'palevioletred', 'GDAlgs':'sandybrown', 'Topk_GD':'tomato',
+                'NP_sp_npre': 'gray', 'RME_sp_npre': 'skyblue', 'RME_sp_L_npre': 'springgreen', 'RME_npre': 'tomato', 'GDAlgs_npre': 'peachpuff', 'GD_nonsparse': 'plum', 'Full':'tomato', 'Full_Filter': 'tomato'
                 }
 
         markers = {'RME_sp': 'o',
@@ -1626,28 +1629,34 @@ class plot_data(RunCollection):
                    'GD_nonsparse': '*',
                    'Stage2_GD': 'o',
                   'Stage2_filter': 'p',
-                  'Full_Filter': 'o'
+                  'Top_K_Filtered_RME': '*',
+                  'Full': '^',
+                  'Full_Filter': '^',
+                  'Top_K_GD': '^'
                    }
 
         labels = {'NP_sp': 'NP_sp',
                   'ransacGaussianMean': 'RANSAC',
-                  'RME_sp': 'Filter_sp_LQ',
+                  'RME_sp': 'Sparse Filter',
                   'RME_sp_L': 'Filter_sp_L',
                   'Oracle': 'Oracle',
-                  'RME': 'Filter_nsp',
+                  'RME': 'Non-sparse Filter',
                   'Top_K': 'Stage 1',
-                  'Top_K_Filtered': 'Full',
+                  'Top_K_Filtered': 'Top_K_Filtered',
                   'GDAlgs': 'Sparse GD',
                   'Topk_GD': 'Topk_GD',
                   'NP_sp_npre': 'NP_sp_npre',
                   'RME_sp_npre': 'Filter_sp_LQ_npre', 
                   'RME_sp_L_npre': 'Filter_sp_L_npre', 
                   'RME_npre': 'Filter_nsp_npre', 
-                  'GDAlgs_npre': 'Sparse GD_npre',
+                  'GDAlgs_npre': 'Sparse GD',
                   'GD_nonsparse': 'GD_nonsparse',
                   'Stage2_GD': 'Stage2_GD',
                   'Stage2_filter': 'Stage2_filter',
-                  'Full_Filter': 'Full'
+                  'Top_K_Filtered_RME': 'Top_K_Filtered_RME',
+                  'Full': 'Full_GD',
+                  'Full_Filter': 'Full_Filter',
+                  'Top_K_GD': 'Full_GD'
                   }
 
         fig, axs = plt.subplots(1, 3, figsize=(12, 2.5))
@@ -1678,10 +1687,13 @@ class plot_data(RunCollection):
                 axs[i].fill_between(xs, mins, maxs,alpha=0.2)
                 axs[i].plot(xs, np.median(A, axis=0),
                         label=labels[key], marker=markers[key])
-                axs[i].set_xlabel('$k$')
+                axs[i].set_xlabel(xlabel[i])
                 axs[i].set_title(titles[i], fontsize=12)
-                axs[i].set_xlim(5, 100)
-                axs[i].legend(loc='upper left', fontsize=10)
+                if xlim:
+                    axs[i].set_xlim(*xlim)
+                if ylim:
+                    axs[i].set_ylim(*ylim)
+                axs[i].legend(loc='best', fontsize=7)
 
         #p = copy.copy(self.params)
 
@@ -1699,25 +1711,24 @@ class plot_data(RunCollection):
         fig.text(0.08, 0.5, '$\\ell_2$ error', va='center', rotation='vertical', fontsize=12)
         # plt.legend(prop={'size' : 14})
         plt.yscale(yscale)
-        plt.xlim(5,100)
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_3_xloss_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_3_xloss_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim=None, ylim=None):
         Run1 = self.readdata(filename1)
         Run2 = self.readdata(filename2)
         Run3 = self.readdata(filename3)
         self.plot_3_xloss(outputfilename, Run1, Run2, Run3, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname, yscale)
+                        xs, fsize, fpad, figsize, fontname, yscale, xlim=xlim, ylim=ylim)
 
-    def plotxy_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
+    def plotxy_3_fromfile(self, outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear', xlim=None, ylim=None):
 
         self.plot_3_xloss_fromfile(outputfilename, filename1, filename2, filename3, title, xlabel, ylabel, xs=xs, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale)
+                                 fsize=fsize, fpad=fpad, fontname=fontname, yscale=yscale, xlim=xlim, ylim=ylim)
         plt.figure()
 
-    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear'):
+    def plot_xtime(self, outputfilename, runs, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale = 'linear', xlim=None):
 
         cols = {'RME_sp_time': 'b', 'RME_sp_L_time': 'g', 'RME_time': 'r', 'ransacGaussianMean_time': 'y',
                 'NP_sp_time': 'k', 'Oracle_time': 'c', 'Top_K_time': 'darkseagreen', 'Top_K_Filtered_time': 'palevioletred', 'GDAlgs_time':'sandybrown', 'Topk_GD_time':'m',
@@ -1801,19 +1812,20 @@ class plot_data(RunCollection):
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.legend()
         plt.yscale(yscale)
+        plt.xlim(xs[0], xs[-1])
         #plt.ylim(*ylims)
         plt.savefig(outputfilename, bbox_inches='tight')
         plt.tight_layout()
 
-    def plot_xtime_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear'):
+    def plot_xtime_fromfile(self, outputfilename, filename, title, xlabel, ylabel, xs=[], fsize=10, fpad=10, figsize=(1, 1), fontname='Arial', yscale='linear', xlim=None):
         Run = self.readdata(filename)
         self.plot_xtime(outputfilename, Run, title, xlabel, ylabel,
-                        xs, fsize, fpad, figsize, fontname, yscale)
+                        xs, fsize, fpad, figsize, fontname, yscale, xlim=xlim)
 
-    def plotxy_fromfile_time(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear'):
+    def plotxy_fromfile_time(self, outputfilename, filename, title, xlabel, ylabel, figsize=(1, 1), fsize=10, fpad=10, xs=[], fontname='Arial', yscale='linear', xlim=None):
 
         self.plot_xtime_fromfile(outputfilename, filename, title, xlabel, ylabel, figsize=figsize,
-                                 fsize=fsize, fpad=fpad, xs=xs, fontname=fontname, yscale=yscale)
+                                 fsize=fsize, fpad=fpad, xs=xs, fontname=fontname, yscale=yscale, xlim=xlim)
         plt.figure()
 
     def plot_heatmap(self, outputfilename, runs, title, xlabel, ylabel, xs=[], ys = [],fsize=10, fpad=10, figsize=(1,1), fontname='Arial', yscale = 'linear'):

@@ -1892,11 +1892,11 @@ class plot_data(RunCollection):
 
         im2 = axs[1].imshow(A2, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')
-        axs[1].set_title('Pareto', fontsize=12)
+        axs[1].set_title('Pareto ($b=2$)', fontsize=12)
 
         im3 = axs[2].imshow(A3, cmap=mpl.colormaps['YlGn'],
                             interpolation='bicubic')
-        axs[2].set_title('Student $t$', fontsize=12)
+        axs[2].set_title('Student $t$ ($\\nu=2$)', fontsize=12)
 
         for i in range(3):
             axs[i].set_xticks(np.arange(len(xs)), labels=xs)

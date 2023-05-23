@@ -1582,7 +1582,7 @@ class plot_data(RunCollection):
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         plt.xticks(color='k', fontsize=12)
         plt.yticks(color='k', fontsize=12)
-        plt.legend(prop={'size' : 14})
+        plt.legend(fontsize=12)
         plt.yscale(yscale)
         plt.xscale(yscale)
         if xlim:
@@ -1761,7 +1761,7 @@ class plot_data(RunCollection):
                   'RME_sp_L_time': 'Filter_sp_L',
                   'Oracle_time': 'Oracle',
                   'RME_time': 'Filter_nsp',
-                  'Top_K_time': 'Top_K',
+                  'Top_K_time': 'Stage 1',
                   'Top_K_Filtered_time': 'Top_K + Filter_sp_LQ',
                   'GDAlgs_time': 'Sparse GD',
                   'Topk_GD_time': 'Top_K + Sparse GD',
@@ -1810,7 +1810,7 @@ class plot_data(RunCollection):
         plt.title(title, pad=fpad, fontsize=fsize)
         plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
-        plt.legend()
+        plt.legend(fontsize=12)
         plt.yscale(yscale)
         plt.xlim(xs[0], xs[-1])
         #plt.ylim(*ylims)
@@ -1911,7 +1911,7 @@ class plot_data(RunCollection):
         # cbar = ax.figure.colorbar(im, ax=ax)
         # cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
         cbar = fig.colorbar(im1, ax=axs, orientation='vertical', shrink=0.6)
-        cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+        cbar.ax.set_ylabel('$\\ell_2$ error', rotation=-90, va="bottom")
         # plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         # plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         fig.text(0.08, 0.5, '$k$', va='center', rotation='vertical', fontsize=12)

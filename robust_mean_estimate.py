@@ -1880,7 +1880,7 @@ class plot_data(RunCollection):
         # cbar = ax.figure.colorbar(im, ax=ax)
         # cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
         cbar = fig.colorbar(im1, ax=axs, orientation='vertical', shrink=0.6)
-        cbar.ax.set_ylabel("loss", rotation=-90, va="bottom")
+        cbar.ax.set_ylabel('$\ell_2$ error', rotation=-90, va="bottom")
         # plt.xlabel(xlabel, fontsize=fsize, labelpad=fpad)
         # plt.ylabel(ylabel, labelpad=fpad, fontsize=fsize)
         fig.text(0.08, 0.5, '$k$', va='center', rotation='vertical', fontsize=12)

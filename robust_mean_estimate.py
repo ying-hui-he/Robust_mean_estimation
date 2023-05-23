@@ -707,6 +707,7 @@ class Full_Filter(FilterAlgs):
             tmp = mean
             mean = np.zeros(len(stage1_mean))
             mean[pred_k[0]] = tmp
+            return mean, time_stage_1 + time_stage_2
 
         final_mean = np.zeros(len(stage1_mean))
 
@@ -970,6 +971,48 @@ class GDAlgs(GDAlgs_npre):
         self.params = params
 
         return super().alg(S = S, indicator = indicator)
+
+
+class Top_K_GD(GDAlgs_npre):
+
+    def trim_data(self, S, top_indices):
+
+        k = self.params.k
+        S_new = S[:, top_indices]
+        self.params.d = k
+        return S_new
+
+    def alg(self, S, indicator):
+        eps_tmp = self.params.eps
+        m_tmp = self.params.m
+        indicator_tmp = indicator
+        params, S_tmp, indicator = pre_processing(self.params, S, indicator)
+        self.params = params
+        indicator = indicator_tmp
+        start_time = time.time()
+
+        stage1_mean, pred_k = Top_K.GD(self, S_tmp, 200)
+        self.params.m = m_tmp
+        self.params.eps = eps_tmp
+        S_trimmed = self.trim_data(S, pred_k)
+        time_stage_1 = time.time() - start_time
+
+        mean, time_stage_2  =  super().alg(S_trimmed, indicator)
+
+        if type(mean) == int:
+            tmp = mean
+            mean = np.zeros(len(stage1_mean))
+            mean[pred_k[0]] = tmp
+            return mean, time_stage_1 + time_stage_2
+
+        final_mean = np.zeros(len(stage1_mean))
+
+        j = 0
+        for i in pred_k:
+            final_mean[i] = mean[j]
+            j = j + 1
+
+        return final_mean, time_stage_1 + time_stage_2
 
 
 class Top_K(object):
@@ -1474,7 +1517,8 @@ class plot_data(RunCollection):
                   'Stage2_filter': 'p',
                   'Top_K_Filtered_RME': '*',
                   'Full': '^',
-                  'Full_Filter': '^'
+                  'Full_Filter': '^',
+                  'Top_K_GD': '^'
                    }
 
         labels = {'NP_sp': 'NP_sp',
@@ -1497,7 +1541,8 @@ class plot_data(RunCollection):
                   'Stage2_filter': 'Stage2_filter',
                   'Top_K_Filtered_RME': 'Top_K_Filtered_RME',
                   'Full': 'Full_GD',
-                  'Full_Filter': 'Full_Filter'
+                  'Full_Filter': 'Full_Filter',
+                  'Top_K_GD': 'Full_GD'
                   }
 
         s = len(runs)
@@ -1694,7 +1739,9 @@ class plot_data(RunCollection):
                    'RME_sp_L_npre_time': 'v', 
                    'RME_npre_time': '^', 
                    'GDAlgs_npre_time': '^',
-                   'GD_nonsparse_time': '*'
+                   'GD_nonsparse_time': '*',
+                   'Full_time': '^',
+                  'Full_Filter_time': '^'
                    }
 
         labels = {'NP_sp_time': 'NP_sp',
@@ -1712,7 +1759,9 @@ class plot_data(RunCollection):
                   'RME_sp_L_npre_time': 'Filter_sp_L_npre', 
                   'RME_npre_time': 'Filter_nsp_npre', 
                   'GDAlgs_npre_time': 'Sparse GD_npre',
-                  'GD_nonsparse_time': 'GD_nonsparse'
+                  'GD_nonsparse_time': 'GD_nonsparse',
+                  'Full_time': 'Full_GD',
+                  'Full_Filter_time': 'Full_Filter'
                   }
 
         s = len(runs)
@@ -1735,9 +1784,9 @@ class plot_data(RunCollection):
             mins = [np.sort(x)[int(s*0.25)] for x in A.T]
             maxs = [np.sort(x)[int(s*0.75)] for x in A.T]
 
-            plt.fill_between(xs, mins, maxs, color=cols[key], alpha=0.2)
+            plt.fill_between(xs, mins, maxs, alpha=0.2)
             plt.plot(xs, np.median(A, axis=0),
-                     label=labels[key], color=cols[key], marker=markers[key])
+                     label=labels[key], marker=markers[key])
 
         #p = copy.copy(self.params)
 

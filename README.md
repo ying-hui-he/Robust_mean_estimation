@@ -13,7 +13,7 @@ The main libraries used in this project are listed below:
 * `scipy`
 * `matplotlib`
 
-For more information, refer to `requirement.txt`.
+For more information, refer to `requirements.txt`.
 
 Explanation of Files
 ==
